@@ -7,7 +7,9 @@
 const unsigned int WINDOW_WIDTH = 800;
 const unsigned int WINDOW_HEIGHT = 600;
 
-void framebuffer_size_callback(GLFWwindow *window, int width, int height);
+void framebufferSizeCallback(GLFWwindow *window, int width, int height);
+void processInput(GLFWwindow *window);
+bool isKeyPressed(GLFWwindow *window, int key);
 
 int main()
 {
@@ -18,14 +20,16 @@ int main()
     glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
     glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
 
-    GLFWwindow *window = glfwCreateWindow(WINDOW_WIDTH, WINDOW_HEIGHT, "LearnOpenGL - fellsand", nullptr, nullptr);
+    GLFWwindow *window = glfwCreateWindow(
+            WINDOW_WIDTH, WINDOW_HEIGHT,
+            "LearnOpenGL - fellsand", nullptr, nullptr);
     if (window == nullptr) {
     	std::cout << "Failed to create GLFW window" << std::endl;
         glfwTerminate();
         return -1;
     }
     glfwMakeContextCurrent(window);
-    glfwSetFramebufferSizeCallback(window, framebuffer_size_callback);
+    glfwSetFramebufferSizeCallback(window, framebufferSizeCallback);
 
     std::cout << "GLAD init..." << std::endl;
     if (!gladLoadGLLoader((GLADloadproc)glfwGetProcAddress)) {
@@ -36,6 +40,11 @@ int main()
     std::cout << "Starting window and main loop..." << std::endl;
     glViewport(0, 0, WINDOW_WIDTH, WINDOW_HEIGHT);
     while (!glfwWindowShouldClose(window)) {
+        processInput(window);
+
+        glClearColor(0.2f, 0.3f, 0.3f, 1.0f);
+        glClear(GL_COLOR_BUFFER_BIT);
+
         glfwSwapBuffers(window);
         glfwPollEvents();
     }
@@ -45,7 +54,17 @@ int main()
 }
 
 /* Will serve as a callback for GLFW whenever the window is resized */
-void framebuffer_size_callback(GLFWwindow *window, int width, int height)
+void framebufferSizeCallback(GLFWwindow *window, int width, int height)
 {
     glViewport(0, 0, width, height);
+}
+
+void processInput(GLFWwindow *window) {
+    if (isKeyPressed(window, GLFW_KEY_ESCAPE)) {
+        glfwSetWindowShouldClose(window, true);
+    }
+}
+
+bool isKeyPressed(GLFWwindow *window, int key) {
+    return glfwGetKey(window, key) == GLFW_PRESS;
 }
