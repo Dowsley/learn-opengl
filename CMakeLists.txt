@@ -9,7 +9,8 @@ set(HEADER_FILES shader.h)
 include_directories(include)
 include_directories(GLAD/include)
 
-add_executable(learn_opengl main.cpp)
+add_executable(learn_opengl main.cpp
+        GLAD/src/glad.c)
 
 target_link_libraries(learn_opengl -lglfw3 -lGL -lX11 -lpthread -lXrandr -lXi)
 
