@@ -10,7 +10,8 @@ const unsigned int WINDOW_HEIGHT = 600;
 void framebufferSizeCallback(GLFWwindow *window, int width, int height);
 void processInput(GLFWwindow *window);
 bool isKeyPressed(GLFWwindow *window, int key);
-unsigned int setupShader(const char *shaderSource, int shaderType, unsigned int shaderProgram);
+unsigned int createShader(const char *shaderSource, int shaderType);
+void linkShaderToProgram(unsigned int shader, unsigned int program, int shaderType);
 unsigned int createPrimitiveTriangleVAO(float vertices[], int size);
 
 int main()
@@ -39,12 +40,18 @@ int main()
     }
 
     /* 3. OpenGL: Initializing shaders and objects */
-    float vertices[] = {
-        0.0f, 0.5f, 0.0f,
-        -0.5f, -0.5f, 0.0f,
-        0.5f, -0.5f,0.0f
+    float vertices1[] = {
+        -0.5f, 0.5f, 0.0f,
+        -1.0f, -0.5f, 0.0f,
+        0.0f, -0.5f, 0.0f,
     };
-    unsigned int VAO = createPrimitiveTriangleVAO(vertices, sizeof(vertices));
+    float vertices2[] = {
+        0.0f, -0.5f, 0.0f,
+        0.5f, 0.5f, 0.0f,
+        1.0f, -0.5f, 0.0f
+    };
+    unsigned int VAO1 = createPrimitiveTriangleVAO(vertices1, sizeof(vertices1));
+    unsigned int VAO2 = createPrimitiveTriangleVAO(vertices2, sizeof(vertices2));
 
     const char *vertexShaderSource =
         "#version 330 core\n"
@@ -53,20 +60,36 @@ int main()
         "{\n"
         "gl_Position = vec4(aPos.x, aPos.y, aPos.z, 1.0f);\n"
         "}\0";
-    const char *fragmentShaderSource =
+    const char *fragmentShaderSource1 =
         "#version 330 core\n"
         "out vec4 FragColor;\n"
         "void main()\n"
         "{\n"
         "FragColor = vec4(1.0f, 0.5f, 0.2f, 1.0f);\n"
         "}\0";
-    unsigned int shaderProgram;
-    shaderProgram = glCreateProgram();
-    unsigned int vertexShader = setupShader(vertexShaderSource, GL_VERTEX_SHADER, shaderProgram);
-    unsigned int fragmentShader = setupShader(fragmentShaderSource, GL_FRAGMENT_SHADER, shaderProgram);
-    glLinkProgram(shaderProgram);
+    const char *fragmentShaderSource2 =
+        "#version 330 core\n"
+        "out vec4 FragColor;\n"
+        "void main()\n"
+        "{\n"
+        "FragColor = vec4(1.0f, 1.0f, 0.0f, 1.0f);\n"
+        "}\0";
+    unsigned int shaderProgram1 = glCreateProgram();
+    unsigned int shaderProgram2 = glCreateProgram();
+
+    unsigned int vertexShader = createShader(vertexShaderSource, GL_VERTEX_SHADER);
+    linkShaderToProgram(vertexShader, shaderProgram1, GL_FRAGMENT_SHADER);
+    linkShaderToProgram(vertexShader, shaderProgram2, GL_FRAGMENT_SHADER);
+
+    unsigned int fragmentShader1 = createShader(fragmentShaderSource1, GL_FRAGMENT_SHADER);
+    linkShaderToProgram(fragmentShader1, shaderProgram1, GL_FRAGMENT_SHADER);
+    unsigned int fragmentShader2 = createShader(fragmentShaderSource2, GL_FRAGMENT_SHADER);
+    linkShaderToProgram(fragmentShader2, shaderProgram2, GL_FRAGMENT_SHADER);
+    glLinkProgram(shaderProgram1);
+    glLinkProgram(shaderProgram2);
     glDeleteShader(vertexShader);
-    glDeleteShader(fragmentShader);
+    glDeleteShader(fragmentShader1);
+    glDeleteShader(fragmentShader2);
 
     std::cout << "Starting window and main loop..." << std::endl;
     glViewport(0, 0, WINDOW_WIDTH, WINDOW_HEIGHT);
@@ -76,9 +99,15 @@ int main()
         glClearColor(0.2f, 0.3f, 0.3f, 1.0f);
         glClear(GL_COLOR_BUFFER_BIT);
 
-        glUseProgram(shaderProgram);
-        glBindVertexArray(VAO);
-        glDrawArrays(GL_TRIANGLES, 0, 3);
+        glUseProgram(shaderProgram1);
+        glBindVertexArray(VAO1);
+        glDrawArrays(GL_TRIANGLES, 0, 5);
+        glBindVertexArray(0);
+
+        glUseProgram(shaderProgram2);
+        glBindVertexArray(VAO2);
+        glDrawArrays(GL_TRIANGLES, 0, 5);
+        glBindVertexArray(0);
 
         glfwSwapBuffers(window);
         glfwPollEvents();
@@ -104,7 +133,7 @@ bool isKeyPressed(GLFWwindow *window, int key) {
     return glfwGetKey(window, key) == GLFW_PRESS;
 }
 
-unsigned int setupShader(const char *shaderSource, int shaderType, unsigned int shaderProgram)
+unsigned int createShader(const char *shaderSource, int shaderType)
 {
     unsigned int shader;
     shader = glCreateShader(shaderType);
@@ -120,13 +149,21 @@ unsigned int setupShader(const char *shaderSource, int shaderType, unsigned int 
         glGetShaderInfoLog(shader, INFO_LOG_SIZE, nullptr, infoLog);
         std::cout << "ERROR::SHADER::" << std::to_string(shaderType) << "::COMPILATION_FAILED\n" << infoLog << std::endl;
     }
-    glAttachShader(shaderProgram, shader);
+    return shader;
+}
+
+void linkShaderToProgram(unsigned int shader, unsigned int program, int shaderType)
+{
+    const unsigned int INFO_LOG_SIZE = 512;
+    int success;
+    char infoLog[INFO_LOG_SIZE];
+    glGetShaderiv(shader, GL_COMPILE_STATUS, &success);
+
+    glAttachShader(program, shader);
     if (!success) {
         glGetShaderInfoLog(shader, INFO_LOG_SIZE, nullptr, infoLog);
         std::cout << "ERROR::SHADER::" << std::to_string(shaderType) << "::ATTACH_FAILED\n" << infoLog << std::endl;
     }
-
-    return shader;
 }
 
 unsigned int createPrimitiveTriangleVAO(float vertices[], int size)
