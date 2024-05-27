@@ -10,7 +10,9 @@ include_directories(include)
 include_directories(GLAD/include)
 
 add_executable(learn_opengl main.cpp
-        GLAD/src/glad.c)
+        GLAD/src/glad.c
+        shader.cpp
+        shader.h)
 
 target_link_libraries(learn_opengl -lglfw3 -lGL -lX11 -lpthread -lXrandr -lXi)
 

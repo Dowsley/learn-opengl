@@ -5,6 +5,7 @@
 #include <fstream>
 #include <iterator>
 #include <cmath>
+#include "shader.h"
 
 const unsigned int WINDOW_WIDTH = 800;
 const unsigned int WINDOW_HEIGHT = 600;
@@ -12,10 +13,7 @@ const unsigned int WINDOW_HEIGHT = 600;
 void framebufferSizeCallback(GLFWwindow *window, int width, int height);
 void processInput(GLFWwindow *window);
 bool isKeyPressed(GLFWwindow *window, int key);
-unsigned int createShader(const char *shaderSource, int shaderType);
-void linkShaderToProgram(unsigned int shader, unsigned int program, int shaderType);
 unsigned int createPrimitiveTriangleVAO(float vertices[], int size);
-const std::string readFromFile(const std::string &filename);
 
 int main()
 {
@@ -55,19 +53,7 @@ int main()
     };
     unsigned int VAO = createPrimitiveTriangleVAO(vertices, sizeof(vertices));
 
-    std::string vertexShaderSource = readFromFile("shaders/vertexShader.glsl");
-    std::string fragmentShaderSource = readFromFile("shaders/fragmentShader.glsl");
-
-    unsigned int shaderProgram = glCreateProgram();
-
-    unsigned int vertexShader = createShader(vertexShaderSource.c_str(), GL_VERTEX_SHADER);
-    linkShaderToProgram(vertexShader, shaderProgram, GL_FRAGMENT_SHADER);
-
-    unsigned int fragmentShader = createShader(fragmentShaderSource.c_str(), GL_FRAGMENT_SHADER);
-    linkShaderToProgram(fragmentShader, shaderProgram, GL_FRAGMENT_SHADER);
-    glLinkProgram(shaderProgram);
-    glDeleteShader(vertexShader);
-    glDeleteShader(fragmentShader);
+    Shader ourShader("shaders/vertexShader.glsl", "shaders/fragmentShader.glsl");
 
     glViewport(0, 0, WINDOW_WIDTH, WINDOW_HEIGHT);
     while (!glfwWindowShouldClose(window)) {
@@ -75,7 +61,8 @@ int main()
 
         glClearColor(0.2f, 0.3f, 0.3f, 1.0f);
         glClear(GL_COLOR_BUFFER_BIT);
-        glUseProgram(shaderProgram);
+
+        ourShader.use();
 
         glBindVertexArray(VAO);
         glDrawArrays(GL_TRIANGLES, 0, 3);
@@ -105,39 +92,6 @@ bool isKeyPressed(GLFWwindow *window, int key) {
     return glfwGetKey(window, key) == GLFW_PRESS;
 }
 
-unsigned int createShader(const char *shaderSource, int shaderType)
-{
-    unsigned int shader;
-    shader = glCreateShader(shaderType);
-    glShaderSource(shader, 1, &shaderSource, nullptr);
-    glCompileShader(shader);
-
-    const unsigned int INFO_LOG_SIZE = 512;
-    int success;
-    char infoLog[INFO_LOG_SIZE];
-    glGetShaderiv(shader, GL_COMPILE_STATUS, &success);
-
-    if (!success) {
-        glGetShaderInfoLog(shader, INFO_LOG_SIZE, nullptr, infoLog);
-        std::cout << "ERROR::SHADER::" << std::to_string(shaderType) << "::COMPILATION_FAILED\n" << infoLog << std::endl;
-    }
-    return shader;
-}
-
-void linkShaderToProgram(unsigned int shader, unsigned int program, int shaderType)
-{
-    const unsigned int INFO_LOG_SIZE = 512;
-    int success;
-    char infoLog[INFO_LOG_SIZE];
-    glGetShaderiv(shader, GL_COMPILE_STATUS, &success);
-
-    glAttachShader(program, shader);
-    if (!success) {
-        glGetShaderInfoLog(shader, INFO_LOG_SIZE, nullptr, infoLog);
-        std::cout << "ERROR::SHADER::" << std::to_string(shaderType) << "::ATTACH_FAILED\n" << infoLog << std::endl;
-    }
-}
-
 unsigned int createPrimitiveTriangleVAO(float vertices[], int size)
 {
     /* We create and bind a VAO first, so it registers the VBO and Vertex Attribute calls. */
@@ -161,19 +115,4 @@ unsigned int createPrimitiveTriangleVAO(float vertices[], int size)
     return VAO;
 }
 
-const std::string readFromFile(const std::string &filename)
-{
-    std::string result = "";
-
-    std::string line = "";
-    std::ifstream myFile(filename.c_str());
-
-    if (myFile.is_open()) {
-        while (std::getline(myFile, line)) {
-            result += line + '\n';
-        }
-        myFile.close();
-    }
-    return result;
-}
 
