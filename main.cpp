@@ -49,9 +49,9 @@ int main()
 
     /* 3. OpenGL: Initializing shaders and objects */
     float vertices[] = {
-        0.0, 0.5, 0.0,
-        -0.5, -0.5, 0.0,
-        0.5,-0.5, 0.0,
+        0.0, 0.5, 0.0,      1.0, 0.0, 0.0,
+        -0.5, -0.5, 0.0,        0.0, 1.0, 0.0,
+        0.5,-0.5, 0.0,      0.0, 0.0, 1.0
     };
     unsigned int VAO = createPrimitiveTriangleVAO(vertices, sizeof(vertices));
 
@@ -76,13 +76,6 @@ int main()
         glClearColor(0.2f, 0.3f, 0.3f, 1.0f);
         glClear(GL_COLOR_BUFFER_BIT);
         glUseProgram(shaderProgram);
-
-        // Set a varying color
-        float timeVal = glfwGetTime();
-        float greenVal = (std::sin(timeVal) / 2.0f) + 0.5f;
-        float redVal = (std::cos(timeVal) / 2.0f) + 0.5f;
-        int vertexColorLocation = glGetUniformLocation(shaderProgram, "ourColor");
-        glUniform4f(vertexColorLocation, redVal, greenVal, 0.0f, 1.0f);
 
         glBindVertexArray(VAO);
         glDrawArrays(GL_TRIANGLES, 0, 3);
@@ -160,8 +153,10 @@ unsigned int createPrimitiveTriangleVAO(float vertices[], int size)
     glBufferData(GL_ARRAY_BUFFER, size, vertices, GL_STATIC_DRAW);
 
     /* Set the vertex attribute pointers */
-    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void*)nullptr);
+    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(float), (void*)0);
+    glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(float), (void*) (3*sizeof(float)));
     glEnableVertexAttribArray(0);
+    glEnableVertexAttribArray(1);
 
     return VAO;
 }
