@@ -1,8 +1,10 @@
 #include <iostream>
-#include <memory>
 
 #include <glad/glad.h>
 #include <GLFW/glfw3.h>
+#include <fstream>
+#include <iterator>
+#include <cmath>
 
 const unsigned int WINDOW_WIDTH = 800;
 const unsigned int WINDOW_HEIGHT = 600;
@@ -13,6 +15,7 @@ bool isKeyPressed(GLFWwindow *window, int key);
 unsigned int createShader(const char *shaderSource, int shaderType);
 void linkShaderToProgram(unsigned int shader, unsigned int program, int shaderType);
 unsigned int createPrimitiveTriangleVAO(float vertices[], int size);
+const std::string readFromFile(const std::string &filename);
 
 int main()
 {
@@ -39,74 +42,50 @@ int main()
         return -1;
     }
 
+    int nAttributes;
+    glGetIntegerv(GL_MAX_VERTEX_ATTRIBS, &nAttributes);
+    std::cout << "Maximum number of attributes: " << nAttributes << std::endl;
+
+
     /* 3. OpenGL: Initializing shaders and objects */
-    float vertices1[] = {
-        -0.5f, 0.5f, 0.0f,
-        -1.0f, -0.5f, 0.0f,
-        0.0f, -0.5f, 0.0f,
+    float vertices[] = {
+        0.0, 0.5, 0.0,
+        -0.5, -0.5, 0.0,
+        0.5,-0.5, 0.0,
     };
-    float vertices2[] = {
-        0.0f, -0.5f, 0.0f,
-        0.5f, 0.5f, 0.0f,
-        1.0f, -0.5f, 0.0f
-    };
-    unsigned int VAO1 = createPrimitiveTriangleVAO(vertices1, sizeof(vertices1));
-    unsigned int VAO2 = createPrimitiveTriangleVAO(vertices2, sizeof(vertices2));
+    unsigned int VAO = createPrimitiveTriangleVAO(vertices, sizeof(vertices));
 
-    const char *vertexShaderSource =
-        "#version 330 core\n"
-        "layout (location = 0) in vec3 aPos;\n"
-        "void main()\n"
-        "{\n"
-        "gl_Position = vec4(aPos.x, aPos.y, aPos.z, 1.0f);\n"
-        "}\0";
-    const char *fragmentShaderSource1 =
-        "#version 330 core\n"
-        "out vec4 FragColor;\n"
-        "void main()\n"
-        "{\n"
-        "FragColor = vec4(1.0f, 0.5f, 0.2f, 1.0f);\n"
-        "}\0";
-    const char *fragmentShaderSource2 =
-        "#version 330 core\n"
-        "out vec4 FragColor;\n"
-        "void main()\n"
-        "{\n"
-        "FragColor = vec4(1.0f, 1.0f, 0.0f, 1.0f);\n"
-        "}\0";
-    unsigned int shaderProgram1 = glCreateProgram();
-    unsigned int shaderProgram2 = glCreateProgram();
+    std::string vertexShaderSource = readFromFile("shaders/vertexShader.glsl");
+    std::string fragmentShaderSource = readFromFile("shaders/fragmentShader.glsl");
 
-    unsigned int vertexShader = createShader(vertexShaderSource, GL_VERTEX_SHADER);
-    linkShaderToProgram(vertexShader, shaderProgram1, GL_FRAGMENT_SHADER);
-    linkShaderToProgram(vertexShader, shaderProgram2, GL_FRAGMENT_SHADER);
+    unsigned int shaderProgram = glCreateProgram();
 
-    unsigned int fragmentShader1 = createShader(fragmentShaderSource1, GL_FRAGMENT_SHADER);
-    linkShaderToProgram(fragmentShader1, shaderProgram1, GL_FRAGMENT_SHADER);
-    unsigned int fragmentShader2 = createShader(fragmentShaderSource2, GL_FRAGMENT_SHADER);
-    linkShaderToProgram(fragmentShader2, shaderProgram2, GL_FRAGMENT_SHADER);
-    glLinkProgram(shaderProgram1);
-    glLinkProgram(shaderProgram2);
+    unsigned int vertexShader = createShader(vertexShaderSource.c_str(), GL_VERTEX_SHADER);
+    linkShaderToProgram(vertexShader, shaderProgram, GL_FRAGMENT_SHADER);
+
+    unsigned int fragmentShader = createShader(fragmentShaderSource.c_str(), GL_FRAGMENT_SHADER);
+    linkShaderToProgram(fragmentShader, shaderProgram, GL_FRAGMENT_SHADER);
+    glLinkProgram(shaderProgram);
     glDeleteShader(vertexShader);
-    glDeleteShader(fragmentShader1);
-    glDeleteShader(fragmentShader2);
+    glDeleteShader(fragmentShader);
 
-    std::cout << "Starting window and main loop..." << std::endl;
     glViewport(0, 0, WINDOW_WIDTH, WINDOW_HEIGHT);
     while (!glfwWindowShouldClose(window)) {
         processInput(window);
 
         glClearColor(0.2f, 0.3f, 0.3f, 1.0f);
         glClear(GL_COLOR_BUFFER_BIT);
+        glUseProgram(shaderProgram);
 
-        glUseProgram(shaderProgram1);
-        glBindVertexArray(VAO1);
-        glDrawArrays(GL_TRIANGLES, 0, 5);
-        glBindVertexArray(0);
+        // Set a varying color
+        float timeVal = glfwGetTime();
+        float greenVal = (std::sin(timeVal) / 2.0f) + 0.5f;
+        float redVal = (std::cos(timeVal) / 2.0f) + 0.5f;
+        int vertexColorLocation = glGetUniformLocation(shaderProgram, "ourColor");
+        glUniform4f(vertexColorLocation, redVal, greenVal, 0.0f, 1.0f);
 
-        glUseProgram(shaderProgram2);
-        glBindVertexArray(VAO2);
-        glDrawArrays(GL_TRIANGLES, 0, 5);
+        glBindVertexArray(VAO);
+        glDrawArrays(GL_TRIANGLES, 0, 3);
         glBindVertexArray(0);
 
         glfwSwapBuffers(window);
@@ -186,3 +165,20 @@ unsigned int createPrimitiveTriangleVAO(float vertices[], int size)
 
     return VAO;
 }
+
+const std::string readFromFile(const std::string &filename)
+{
+    std::string result = "";
+
+    std::string line = "";
+    std::ifstream myFile(filename.c_str());
+
+    if (myFile.is_open()) {
+        while (std::getline(myFile, line)) {
+            result += line + '\n';
+        }
+        myFile.close();
+    }
+    return result;
+}
+
