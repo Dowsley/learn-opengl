@@ -9,7 +9,6 @@ const unsigned int WINDOW_WIDTH = 800;
 const unsigned int WINDOW_HEIGHT = 600;
 
 void framebufferSizeCallback(GLFWwindow *window, int width, int height);
-void processInput(GLFWwindow *window);
 bool isKeyPressed(GLFWwindow *window, int key);
 
 int main()
@@ -121,23 +120,42 @@ int main()
     glEnableVertexAttribArray(1);
     glEnableVertexAttribArray(2);
 
-
+    /* 3.3 Shader setup */
     Shader ourShader("shaders/vertexShader.glsl", "shaders/fragmentShader.glsl");
-
     ourShader.use();
     // either set it manually like so:
     glUniform1i(glGetUniformLocation(ourShader.ID, "texture1"), 0);
     // or set it via the texture class
     ourShader.setInt("texture2", 1);
 
+    /* 4. Main loop */
+    float mixRatio = 0.2;
+    float MIX_RATIO_INCREMENT = 0.01f;
     glViewport(0, 0, WINDOW_WIDTH, WINDOW_HEIGHT);
     while (!glfwWindowShouldClose(window)) {
-        processInput(window);
+        /* Input Processing */
+        if (isKeyPressed(window, GLFW_KEY_ESCAPE)) {
+            glfwSetWindowShouldClose(window, true);
+        }
+        if (isKeyPressed(window, GLFW_KEY_UP)) {
+            mixRatio += MIX_RATIO_INCREMENT;
+            if (mixRatio > 1.0) {
+                mixRatio = 1.0;
+            }
+        }
+        if (isKeyPressed(window, GLFW_KEY_DOWN)) {
+            mixRatio -= MIX_RATIO_INCREMENT;
+            if (mixRatio < 0.0) {
+                mixRatio = 0.0;
+            }
+        }
 
+        /* Drawing */
         glClearColor(0.2f, 0.3f, 0.3f, 1.0f);
         glClear(GL_COLOR_BUFFER_BIT);
 
         ourShader.use();
+        ourShader.setFloat("mixRatio", mixRatio);
 
         glActiveTexture(GL_TEXTURE0);
         glBindTexture(GL_TEXTURE_2D, texture1);
@@ -166,12 +184,6 @@ int main()
 void framebufferSizeCallback(GLFWwindow *window, int width, int height)
 {
     glViewport(0, 0, width, height);
-}
-
-void processInput(GLFWwindow *window) {
-    if (isKeyPressed(window, GLFW_KEY_ESCAPE)) {
-        glfwSetWindowShouldClose(window, true);
-    }
 }
 
 bool isKeyPressed(GLFWwindow *window, int key) {
