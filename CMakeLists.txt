@@ -3,27 +3,28 @@ project(learn_opengl)
 
 set(CMAKE_CXX_STANDARD 11)
 
-set(SOURCE_FILES main.cpp GLAD/src/glad.c)
+set(SOURCE_FILES main.cpp includes/GLAD/src/glad.c)
 set(HEADER_FILES shader.h)
 
+include_directories(includes)
 include_directories(include)
-include_directories(GLAD/include)
+include_directories(includes/GLAD/include)
 
 add_executable(learn_opengl main.cpp
-        GLAD/src/glad.c
+        includes/GLAD/src/glad.c
         shader.cpp
-        lib/stb_image.cpp
+        includes/stb_image.cpp
 )
 
 if(WIN32)
     # Use the MinGW pre-built GLFW library
-    set(GLFW3_LIB_PATH "${CMAKE_CURRENT_SOURCE_DIR}/dependencies/lib/libglfw3.a")
+    set(GLFW3_LIB_PATH "${CMAKE_CURRENT_SOURCE_DIR}/lib/libglfw3.a")
 
     if(EXISTS ${GLFW3_LIB_PATH})
         add_library(glfw STATIC IMPORTED)
         set_target_properties(glfw PROPERTIES
                 IMPORTED_LOCATION ${GLFW3_LIB_PATH}
-                INTERFACE_INCLUDE_DIRECTORIES "${CMAKE_CURRENT_SOURCE_DIR}/dependencies/include/GLFW")
+                INTERFACE_INCLUDE_DIRECTORIES "${CMAKE_CURRENT_SOURCE_DIR}/includes/GLFW")
         target_link_libraries(learn_opengl glfw)
     else()
         message(FATAL_ERROR "libglfw3.a not found at ${GLFW3_LIB_PATH}")

@@ -8,6 +8,7 @@
     <excludeRoots>
       <file path="$PROJECT_DIR$/GLAD" />
       <file path="$PROJECT_DIR$/dependencies" />
+      <file path="$PROJECT_DIR$/includes" />
       <file path="$PROJECT_DIR$/lib" />
     </excludeRoots>
   </component>
