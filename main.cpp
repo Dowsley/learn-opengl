@@ -2,8 +2,13 @@
 
 #include <glad/glad.h>
 #include <GLFW/glfw3.h>
-#include "shader.h"
+#include <glm/glm.hpp>
+#include <glm/gtc/matrix_transform.hpp>
+#include <glm/gtc/type_ptr.hpp>
+
 #include "includes/stb_image.h"
+#include "shader.h"
+
 
 const unsigned int WINDOW_WIDTH = 800;
 const unsigned int WINDOW_HEIGHT = 600;
@@ -125,6 +130,7 @@ int main()
     ourShader.use();
     // either set it manually like so:
     glUniform1i(glGetUniformLocation(ourShader.ID, "texture1"), 0);
+
     // or set it via the texture class
     ourShader.setInt("texture2", 1);
 
@@ -153,6 +159,12 @@ int main()
         /* Drawing */
         glClearColor(0.2f, 0.3f, 0.3f, 1.0f);
         glClear(GL_COLOR_BUFFER_BIT);
+
+        glm::mat4 trans = glm::mat4(1.0);
+        trans = translate(trans, glm::vec3(0.5, -0.5, 0.0));
+        trans = glm::rotate(trans, glm::radians((float)glfwGetTime()*500.0f), glm::vec3(0.0, 0.0, 1.0));
+        unsigned int transformLoc = glGetUniformLocation(ourShader.ID, "transform");
+        glUniformMatrix4fv(transformLoc, 1, GL_FALSE, glm::value_ptr(trans));
 
         ourShader.use();
         ourShader.setFloat("mixRatio", mixRatio);

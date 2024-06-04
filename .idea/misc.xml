@@ -5,10 +5,12 @@
   </component>
   <component name="CMakeWorkspace" PROJECT_DIR="$PROJECT_DIR$" />
   <component name="CidrRootsConfiguration">
+    <sourceRoots>
+      <file path="$PROJECT_DIR$/includes" />
+    </sourceRoots>
     <excludeRoots>
       <file path="$PROJECT_DIR$/GLAD" />
       <file path="$PROJECT_DIR$/dependencies" />
-      <file path="$PROJECT_DIR$/includes" />
       <file path="$PROJECT_DIR$/lib" />
     </excludeRoots>
   </component>
