@@ -162,7 +162,7 @@ int main()
 
         glm::mat4 trans = glm::mat4(1.0);
         trans = translate(trans, glm::vec3(0.5, -0.5, 0.0));
-        trans = glm::rotate(trans, glm::radians((float)glfwGetTime()*500.0f), glm::vec3(0.0, 0.0, 1.0));
+        trans = glm::rotate(trans, glm::radians((float)glfwGetTime()*1000.0f), glm::vec3(0.0, 0.0, 1.0));
         unsigned int transformLoc = glGetUniformLocation(ourShader.ID, "transform");
         glUniformMatrix4fv(transformLoc, 1, GL_FALSE, glm::value_ptr(trans));
 
@@ -176,7 +176,18 @@ int main()
 
         glBindVertexArray(VAO);
         glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
-        glBindVertexArray(0);
+
+
+        trans = glm::mat4(1.0);
+        trans = translate(trans, glm::vec3(-0.5, 0.5, 0.0));
+        float scaleVal = (float) std::sin(glfwGetTime() * 20.0f);
+        trans = glm::scale(trans, glm::vec3(scaleVal, scaleVal, scaleVal));
+        transformLoc = glGetUniformLocation(ourShader.ID, "transform");
+        glUniformMatrix4fv(transformLoc, 1, GL_FALSE, glm::value_ptr(trans));
+        glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
+
+        ourShader.use();
+        ourShader.setFloat("mixRatio", mixRatio);
 
         glfwSwapBuffers(window);
         glfwPollEvents();
