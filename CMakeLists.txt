@@ -9,6 +9,7 @@ set(HEADER_FILES shader.h)
 include_directories(includes)
 include_directories(include)
 include_directories(includes/GLAD/include)
+include_directories(includes/glm)
 
 add_executable(learn_opengl main.cpp
         includes/GLAD/src/glad.c
@@ -29,7 +30,13 @@ if(WIN32)
     else()
         message(FATAL_ERROR "libglfw3.a not found at ${GLFW3_LIB_PATH}")
     endif()
+elseif(APPLE)
+    # macOS: use frameworks instead of X11 libraries
+    find_package(glfw3 3.3 REQUIRED)
+    target_link_libraries(learn_opengl glfw)
+    target_link_libraries(learn_opengl "-framework OpenGL -framework Cocoa -framework IOKit -framework CoreVideo")
 elseif(UNIX)
+    # Linux: use X11 libraries
     target_link_libraries(learn_opengl -lglfw3 -lGL -lX11 -lpthread -lXrandr -lXi)
 endif()
 

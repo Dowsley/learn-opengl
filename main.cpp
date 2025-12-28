@@ -9,12 +9,11 @@
 #include "includes/stb_image.h"
 #include "shader.h"
 
+constexpr unsigned int WINDOW_WIDTH = 800;
+constexpr unsigned int WINDOW_HEIGHT = 600;
 
-const unsigned int WINDOW_WIDTH = 800;
-const unsigned int WINDOW_HEIGHT = 600;
-
-void framebufferSizeCallback(GLFWwindow *window, int width, int height);
-bool isKeyPressed(GLFWwindow *window, int key);
+void framebufferSizeCallback(GLFWwindow* window, int width, int height);
+bool isKeyPressed(GLFWwindow* window, int key);
 
 int main()
 {
@@ -24,11 +23,11 @@ int main()
     glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
     glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
 
-    GLFWwindow *window = glfwCreateWindow(
-            WINDOW_WIDTH, WINDOW_HEIGHT,
-            "LearnOpenGL - fellsand", nullptr, nullptr);
-    if (window == nullptr) {
-    	std::cout << "Failed to create GLFW window" << std::endl;
+    GLFWwindow* window = glfwCreateWindow(
+        WINDOW_WIDTH, WINDOW_HEIGHT, "LearnOpenGL - Dowsley", nullptr, nullptr);
+    if (window == nullptr)
+    {
+        std::cout << "Failed to create GLFW window" << std::endl;
         glfwTerminate();
         return -1;
     }
@@ -36,8 +35,9 @@ int main()
     glfwSetFramebufferSizeCallback(window, framebufferSizeCallback);
 
     /* 2. GLAD: Initializing pointers */
-    if (!gladLoadGLLoader((GLADloadproc)glfwGetProcAddress)) {
-	    std::cout << "Failed to initialize GLAD" << std::endl;
+    if (!gladLoadGLLoader((GLADloadproc)glfwGetProcAddress))
+    {
+        std::cout << "Failed to initialize GLAD" << std::endl;
         return -1;
     }
 
@@ -45,18 +45,17 @@ int main()
     glGetIntegerv(GL_MAX_VERTEX_ATTRIBS, &nAttributes);
     std::cout << "Maximum number of attributes: " << nAttributes << std::endl;
 
-
     /* 3. OpenGL: Initializing shaders and objects */
     // Square (position, color, texture coord))
     float vertices[] = {
-        0.5, 0.5, 0.0,      1.0, 0.0, 0.0,      1.0, 1.0, // top right
-        0.5,-0.5, 0.0,      0.0, 1.0, 1.0,      1.0, 0.0, // bottom right
-        -0.5, -0.5, 0.0,        0.0, 0.0, 1.0,      0.0, 0.0, // bottom left
-        -0.5,0.5, 0.0,      1.0, 1.0, 0.0,       0.0, 1.0, //  top left
+        0.5, 0.5, 0.0, 1.0, 0.0, 0.0, 1.0, 1.0, // top right
+        0.5, -0.5, 0.0, 0.0, 1.0, 1.0, 1.0, 0.0, // bottom right
+        -0.5, -0.5, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, // bottom left
+        -0.5, 0.5, 0.0, 1.0, 1.0, 0.0, 0.0, 1.0, //  top left
     };
     unsigned int indices[] = {
-            0, 1, 3, // first triangle
-            1, 2, 3  // second triangle
+        0, 1, 3, // first triangle
+        1, 2, 3 // second triangle
     };
 
     /*
@@ -73,11 +72,16 @@ int main()
 
     int width, height, nChannels;
     stbi_set_flip_vertically_on_load(true);
-    unsigned char *data = stbi_load("assets/textures/container.jpg", &width, &height, &nChannels, 0);
-    if (data) {
-        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, data);
+    unsigned char* data = stbi_load("assets/textures/container.jpg", &width,
+                                    &height, &nChannels, 0);
+    if (data)
+    {
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, width, height, 0, GL_RGB,
+                     GL_UNSIGNED_BYTE, data);
         glGenerateMipmap(GL_TEXTURE_2D);
-    } else {
+    }
+    else
+    {
         std::cout << "Failed to load texture." << std::endl;
     }
     stbi_image_free(data);
@@ -89,15 +93,19 @@ int main()
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-    data = stbi_load("assets/textures/awesomeface.png", &width, &height, &nChannels, 0);
-    if (data) {
-        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, width, height, 0, GL_RGBA, GL_UNSIGNED_BYTE, data);
+    data = stbi_load("assets/textures/awesomeface.png", &width, &height,
+                     &nChannels, 0);
+    if (data)
+    {
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, width, height, 0, GL_RGBA,
+                     GL_UNSIGNED_BYTE, data);
         glGenerateMipmap(GL_TEXTURE_2D);
-    } else {
+    }
+    else
+    {
         std::cout << "Failed to load texture." << std::endl;
     }
     stbi_image_free(data);
-
 
     /*
      * 3.2 VAO and VBO setup
@@ -113,13 +121,16 @@ int main()
     glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
 
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO);
-    glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(indices), indices, GL_STATIC_DRAW);
+    glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(indices), indices,
+                 GL_STATIC_DRAW);
 
     // Set the vertex attribute pointers
     int stride = 8 * sizeof(float);
-    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, stride, (void*)0);
-    glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, stride, (void*) (3*sizeof(float)));
-    glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, stride, (void*) (6*sizeof(float)));
+    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, stride, nullptr);
+    glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, stride,
+                          (void*)(3 * sizeof(float)));
+    glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, stride,
+                          (void*)(6 * sizeof(float)));
 
     glEnableVertexAttribArray(0);
     glEnableVertexAttribArray(1);
@@ -136,22 +147,28 @@ int main()
 
     /* 4. Main loop */
     float mixRatio = 0.2;
-    float MIX_RATIO_INCREMENT = 0.01f;
     glViewport(0, 0, WINDOW_WIDTH, WINDOW_HEIGHT);
-    while (!glfwWindowShouldClose(window)) {
+    while (!glfwWindowShouldClose(window))
+    {
+        float MIX_RATIO_INCREMENT = 0.01f;
         /* Input Processing */
-        if (isKeyPressed(window, GLFW_KEY_ESCAPE)) {
+        if (isKeyPressed(window, GLFW_KEY_ESCAPE))
+        {
             glfwSetWindowShouldClose(window, true);
         }
-        if (isKeyPressed(window, GLFW_KEY_UP)) {
+        if (isKeyPressed(window, GLFW_KEY_UP))
+        {
             mixRatio += MIX_RATIO_INCREMENT;
-            if (mixRatio > 1.0) {
+            if (mixRatio > 1.0)
+            {
                 mixRatio = 1.0;
             }
         }
-        if (isKeyPressed(window, GLFW_KEY_DOWN)) {
+        if (isKeyPressed(window, GLFW_KEY_DOWN))
+        {
             mixRatio -= MIX_RATIO_INCREMENT;
-            if (mixRatio < 0.0) {
+            if (mixRatio < 0.0)
+            {
                 mixRatio = 0.0;
             }
         }
@@ -162,9 +179,10 @@ int main()
 
         glm::mat4 trans = glm::mat4(1.0);
         trans = translate(trans, glm::vec3(0.5, -0.5, 0.0));
-        trans = glm::rotate(trans, glm::radians((float)glfwGetTime()*1000.0f), glm::vec3(0.0, 0.0, 1.0));
+        trans = glm::rotate(trans, glm::radians((float)glfwGetTime() * 1000.0f),
+                            glm::vec3(0.0, 0.0, 1.0));
         unsigned int transformLoc = glGetUniformLocation(ourShader.ID, "transform");
-        glUniformMatrix4fv(transformLoc, 1, GL_FALSE, glm::value_ptr(trans));
+        glUniformMatrix4fv((int)transformLoc, 1, GL_FALSE, glm::value_ptr(trans));
 
         ourShader.use();
         ourShader.setFloat("mixRatio", mixRatio);
@@ -175,16 +193,15 @@ int main()
         glBindTexture(GL_TEXTURE_2D, texture2);
 
         glBindVertexArray(VAO);
-        glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
-
+        glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, nullptr);
 
         trans = glm::mat4(1.0);
         trans = translate(trans, glm::vec3(-0.5, 0.5, 0.0));
-        float scaleVal = (float) std::sin(glfwGetTime() * 20.0f);
+        auto scaleVal = (float)std::sin(glfwGetTime() * 20.0f);
         trans = glm::scale(trans, glm::vec3(scaleVal, scaleVal, scaleVal));
         transformLoc = glGetUniformLocation(ourShader.ID, "transform");
-        glUniformMatrix4fv(transformLoc, 1, GL_FALSE, glm::value_ptr(trans));
-        glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
+        glUniformMatrix4fv((int)transformLoc, 1, GL_FALSE, glm::value_ptr(trans));
+        glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, nullptr);
 
         ourShader.use();
         ourShader.setFloat("mixRatio", mixRatio);
@@ -204,13 +221,12 @@ int main()
 }
 
 /* Will serve as a callback for GLFW whenever the window is resized */
-void framebufferSizeCallback(GLFWwindow *window, int width, int height)
+void framebufferSizeCallback(GLFWwindow* window, int width, int height)
 {
     glViewport(0, 0, width, height);
 }
 
-bool isKeyPressed(GLFWwindow *window, int key) {
+bool isKeyPressed(GLFWwindow* window, int key)
+{
     return glfwGetKey(window, key) == GLFW_PRESS;
 }
-
-
