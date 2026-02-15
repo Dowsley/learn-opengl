@@ -147,7 +147,9 @@ int main()
 
     /* 4. Main loop */
     float mixRatio = 0.2;
-    glViewport(0, 0, WINDOW_WIDTH, WINDOW_HEIGHT);
+    int fbWidth, fbHeight;
+    glfwGetFramebufferSize(window, &fbWidth, &fbHeight);
+    glViewport(0, 0, fbWidth, fbHeight);
     while (!glfwWindowShouldClose(window))
     {
         float MIX_RATIO_INCREMENT = 0.01f;
