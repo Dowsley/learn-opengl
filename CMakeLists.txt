@@ -5,6 +5,7 @@ set(CMAKE_CXX_STANDARD 11)
 
 set(SOURCE_FILES main.cpp includes/GLAD/src/glad.c)
 set(HEADER_FILES shader.h)
+set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
 include_directories(includes)
 include_directories(include)
