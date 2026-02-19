@@ -2,45 +2,42 @@ cmake_minimum_required(VERSION 3.28)
 project(learn_opengl)
 
 set(CMAKE_CXX_STANDARD 17)
-
-set(SOURCE_FILES application.cpp includes/GLAD/src/glad.c)
-set(HEADER_FILES shader.h)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
-include_directories(includes)
-include_directories(include)
-include_directories(includes/GLAD/include)
-include_directories(includes/glm)
+# Find dependencies (provided by vcpkg)
+find_package(glfw3 CONFIG REQUIRED)
+find_package(glad CONFIG REQUIRED)
+find_package(glm CONFIG REQUIRED)
+find_path(STB_INCLUDE_DIRS "stb_image.h")
 
-add_executable(learn_opengl application.cpp
-        includes/GLAD/src/glad.c
-        shader.cpp
-        includes/stb_image.cpp
+add_executable(learn_opengl
+        src/main.cpp
+        src/application.cpp
+        src/render/shader.cpp
+        src/render/stb_impl.cpp
 )
 
-if(WIN32)
-    # Use the MinGW pre-built GLFW library
-    set(GLFW3_LIB_PATH "${CMAKE_CURRENT_SOURCE_DIR}/lib/libglfw3.a")
+target_include_directories(learn_opengl PRIVATE
+        ${CMAKE_SOURCE_DIR}/src
+        ${STB_INCLUDE_DIRS}
+)
 
-    if(EXISTS ${GLFW3_LIB_PATH})
-        add_library(glfw STATIC IMPORTED)
-        set_target_properties(glfw PROPERTIES
-                IMPORTED_LOCATION ${GLFW3_LIB_PATH}
-                INTERFACE_INCLUDE_DIRECTORIES "${CMAKE_CURRENT_SOURCE_DIR}/includes/GLFW")
-        target_link_libraries(learn_opengl glfw)
-    else()
-        message(FATAL_ERROR "libglfw3.a not found at ${GLFW3_LIB_PATH}")
-    endif()
-elseif(APPLE)
-    # macOS: use frameworks instead of X11 libraries
-    find_package(glfw3 3.3 REQUIRED)
-    target_link_libraries(learn_opengl glfw)
-    target_link_libraries(learn_opengl "-framework OpenGL -framework Cocoa -framework IOKit -framework CoreVideo")
-elseif(UNIX)
-    # Linux: use X11 libraries
-    target_link_libraries(learn_opengl -lglfw3 -lGL -lX11 -lpthread -lXrandr -lXi)
+target_link_libraries(learn_opengl PRIVATE
+        glfw
+        glad::glad
+        glm::glm
+)
+
+if(APPLE)
+    target_link_libraries(learn_opengl PRIVATE
+            "-framework OpenGL"
+            "-framework Cocoa"
+            "-framework IOKit"
+            "-framework CoreVideo"
+    )
 endif()
 
+# Copy shaders and assets to build directory
 add_custom_command(
         TARGET learn_opengl PRE_BUILD
         COMMAND ${CMAKE_COMMAND} -E remove_directory $<TARGET_FILE_DIR:learn_opengl>/shaders

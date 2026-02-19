@@ -69,6 +69,6 @@ fun
 ## todo
 
 - [x] plit application into a container class
-- [ ] use a goddamn package manager to better organize those dependencies
+- [x] use a goddamn package manager to better organize those dependencies
 - [ ] separate camera component
 - [ ] separate input polling
