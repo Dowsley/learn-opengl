@@ -8,22 +8,24 @@
 #include "includes/stb_image.h"
 #include "shader.h"
 
-constexpr unsigned int WINDOW_WIDTH = 800;
-constexpr unsigned int WINDOW_HEIGHT = 600;
+constexpr unsigned int SCALE = 2;
+constexpr unsigned int WINDOW_WIDTH = 800 *  SCALE;
+constexpr unsigned int WINDOW_HEIGHT = 600 * SCALE;
 
-void framebufferSizeCallback(GLFWwindow* window, int width, int height);
-bool isKeyPressed(GLFWwindow* window, int key);
+void framebufferSizeCallback(GLFWwindow *window, int width, int height);
+bool isKeyPressed(GLFWwindow *window, int key);
 
 int main()
 {
+    bool wireframeMode = false;
+
     /* 1. GLFW: Set up context */
     glfwInit();
     glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
     glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
     glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
 
-    GLFWwindow* window = glfwCreateWindow(
-        WINDOW_WIDTH, WINDOW_HEIGHT, "LearnOpenGL - Dowsley", nullptr, nullptr);
+    GLFWwindow *window = glfwCreateWindow(WINDOW_WIDTH, WINDOW_HEIGHT, "LearnOpenGL - Dowsley", nullptr, nullptr);
     if (window == nullptr)
     {
         std::cout << "Failed to create GLFW window" << std::endl;
@@ -45,16 +47,52 @@ int main()
     std::cout << "Maximum number of attributes: " << nAttributes << std::endl;
 
     /* 3. OpenGL: Initializing shaders and objects */
-    // Square (position, color, texture coord))
+    // Cube (36 vertices: 6 faces x 2 triangles x 3 vertices)
+    // Color per corner: (r,g,b) = (x+0.5, y+0.5, z+0.5)
     float vertices[] = {
-        0.5, 0.5, 0.0, 1.0, 0.0, 0.0, 1.0, 1.0, // top right
-        0.5, -0.5, 0.0, 0.0, 1.0, 1.0, 1.0, 0.0, // bottom right
-        -0.5, -0.5, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, // bottom left
-        -0.5, 0.5, 0.0, 1.0, 1.0, 0.0, 0.0, 1.0, //  top left
-    };
-    unsigned int indices[] = {
-        0, 1, 3, // first triangle
-        1, 2, 3 // second triangle
+        // positions          // colors          // tex coords
+        // Back face (z = -0.5)
+       -0.5f, -0.5f, -0.5f,  0.0f, 0.0f, 0.0f,   0.0f, 0.0f,
+        0.5f, -0.5f, -0.5f,  1.0f, 0.0f, 0.0f,   1.0f, 0.0f,
+        0.5f,  0.5f, -0.5f,  1.0f, 1.0f, 0.0f,   1.0f, 1.0f,
+        0.5f,  0.5f, -0.5f,  1.0f, 1.0f, 0.0f,   1.0f, 1.0f,
+       -0.5f,  0.5f, -0.5f,  0.0f, 1.0f, 0.0f,   0.0f, 1.0f,
+       -0.5f, -0.5f, -0.5f,  0.0f, 0.0f, 0.0f,   0.0f, 0.0f,
+        // Front face (z = 0.5)
+       -0.5f, -0.5f,  0.5f,  0.0f, 0.0f, 1.0f,   0.0f, 0.0f,
+        0.5f, -0.5f,  0.5f,  1.0f, 0.0f, 1.0f,   1.0f, 0.0f,
+        0.5f,  0.5f,  0.5f,  1.0f, 1.0f, 1.0f,   1.0f, 1.0f,
+        0.5f,  0.5f,  0.5f,  1.0f, 1.0f, 1.0f,   1.0f, 1.0f,
+       -0.5f,  0.5f,  0.5f,  0.0f, 1.0f, 1.0f,   0.0f, 1.0f,
+       -0.5f, -0.5f,  0.5f,  0.0f, 0.0f, 1.0f,   0.0f, 0.0f,
+        // Left face (x = -0.5)
+       -0.5f,  0.5f,  0.5f,  0.0f, 1.0f, 1.0f,   1.0f, 0.0f,
+       -0.5f,  0.5f, -0.5f,  0.0f, 1.0f, 0.0f,   1.0f, 1.0f,
+       -0.5f, -0.5f, -0.5f,  0.0f, 0.0f, 0.0f,   0.0f, 1.0f,
+       -0.5f, -0.5f, -0.5f,  0.0f, 0.0f, 0.0f,   0.0f, 1.0f,
+       -0.5f, -0.5f,  0.5f,  0.0f, 0.0f, 1.0f,   0.0f, 0.0f,
+       -0.5f,  0.5f,  0.5f,  0.0f, 1.0f, 1.0f,   1.0f, 0.0f,
+        // Right face (x = 0.5)
+        0.5f,  0.5f,  0.5f,  1.0f, 1.0f, 1.0f,   1.0f, 0.0f,
+        0.5f,  0.5f, -0.5f,  1.0f, 1.0f, 0.0f,   1.0f, 1.0f,
+        0.5f, -0.5f, -0.5f,  1.0f, 0.0f, 0.0f,   0.0f, 1.0f,
+        0.5f, -0.5f, -0.5f,  1.0f, 0.0f, 0.0f,   0.0f, 1.0f,
+        0.5f, -0.5f,  0.5f,  1.0f, 0.0f, 1.0f,   0.0f, 0.0f,
+        0.5f,  0.5f,  0.5f,  1.0f, 1.0f, 1.0f,   1.0f, 0.0f,
+        // Bottom face (y = -0.5)
+       -0.5f, -0.5f, -0.5f,  0.0f, 0.0f, 0.0f,   0.0f, 1.0f,
+        0.5f, -0.5f, -0.5f,  1.0f, 0.0f, 0.0f,   1.0f, 1.0f,
+        0.5f, -0.5f,  0.5f,  1.0f, 0.0f, 1.0f,   1.0f, 0.0f,
+        0.5f, -0.5f,  0.5f,  1.0f, 0.0f, 1.0f,   1.0f, 0.0f,
+       -0.5f, -0.5f,  0.5f,  0.0f, 0.0f, 1.0f,   0.0f, 0.0f,
+       -0.5f, -0.5f, -0.5f,  0.0f, 0.0f, 0.0f,   0.0f, 1.0f,
+        // Top face (y = 0.5)
+       -0.5f,  0.5f, -0.5f,  0.0f, 1.0f, 0.0f,   0.0f, 1.0f,
+        0.5f,  0.5f, -0.5f,  1.0f, 1.0f, 0.0f,   1.0f, 1.0f,
+        0.5f,  0.5f,  0.5f,  1.0f, 1.0f, 1.0f,   1.0f, 0.0f,
+        0.5f,  0.5f,  0.5f,  1.0f, 1.0f, 1.0f,   1.0f, 0.0f,
+       -0.5f,  0.5f,  0.5f,  0.0f, 1.0f, 1.0f,   0.0f, 0.0f,
+       -0.5f,  0.5f, -0.5f,  0.0f, 1.0f, 0.0f,   0.0f, 1.0f,
     };
 
     /*
@@ -107,29 +145,28 @@ int main()
     stbi_image_free(data);
 
     /*
-     * 3.2 VAO and VBO setup
+     * 3.2 buffer objects setup
      * */
-    unsigned int VAO, VBO, EBO;
+    unsigned int VBO; // vertex buffer object
+    unsigned int VAO; // vertex array object: stores vertex attributes so they can be easily reused
+    // unsigned int EBO; // element buffer object (aka index buffer): stores indices for vertex array (order of what to draw, useful for not relying on order of VBO indices, and thus eliminating repeating vertices)
     glGenVertexArrays(1, &VAO);
     glGenBuffers(1, &VBO);
-    glGenBuffers(1, &EBO);
+    // glGenBuffers(1, &EBO);
 
     glBindVertexArray(VAO);
 
     glBindBuffer(GL_ARRAY_BUFFER, VBO);
     glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
 
-    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO);
-    glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(indices), indices,
-                 GL_STATIC_DRAW);
+    // glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO);
+    // glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(indices), indices, GL_STATIC_DRAW);
 
     // Set the vertex attribute pointers
     int stride = 8 * sizeof(float);
-    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, stride, nullptr);
-    glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, stride,
-                          (void*)(3 * sizeof(float)));
-    glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, stride,
-                          (void*)(6 * sizeof(float)));
+    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, stride, (void*) 0);
+    glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, stride, (void*)(3 * sizeof(float)));
+    glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, stride, (void*)(6 * sizeof(float)));
 
     glEnableVertexAttribArray(0);
     glEnableVertexAttribArray(1);
@@ -138,17 +175,17 @@ int main()
     /* 3.3 Shader setup */
     Shader ourShader("shaders/vertexShader.glsl", "shaders/fragmentShader.glsl");
     ourShader.use();
-    // either set it manually like so:
-    glUniform1i(glGetUniformLocation(ourShader.ID, "texture1"), 0);
-
-    // or set it via the texture class
+    ourShader.setInt("texture1", 0);
     ourShader.setInt("texture2", 1);
 
     /* 4. Main loop */
+    glEnable(GL_DEPTH_TEST);
     float mixRatio = 0.2;
     int fbWidth, fbHeight;
     glfwGetFramebufferSize(window, &fbWidth, &fbHeight);
     glViewport(0, 0, fbWidth, fbHeight);
+
+    auto cameraPos = glm::vec3(0.0f, 0.0f, -3.0f);
     while (!glfwWindowShouldClose(window))
     {
         float MIX_RATIO_INCREMENT = 0.01f;
@@ -173,39 +210,86 @@ int main()
                 mixRatio = 0.0;
             }
         }
+        if (isKeyPressed(window, GLFW_KEY_LEFT_ALT))
+        {
+            wireframeMode = !wireframeMode;
+        }
+        constexpr auto SPEED = 0.1f;
+        if (isKeyPressed(window, GLFW_KEY_A))
+        {
+            cameraPos.x += SPEED;
+        }
+        if (isKeyPressed(window, GLFW_KEY_D))
+        {
+            cameraPos.x -= SPEED;
+        }
+        if (isKeyPressed(window, GLFW_KEY_W))
+        {
+            cameraPos.z += SPEED;
+        }
+        if (isKeyPressed(window, GLFW_KEY_S))
+        {
+            cameraPos.z -= SPEED;
+        }
+        if (isKeyPressed(window, GLFW_KEY_LEFT_SHIFT))
+        {
+            cameraPos.y += SPEED;
+        }
+        if (isKeyPressed(window, GLFW_KEY_SPACE))
+        {
+            cameraPos.y -= SPEED;
+        }
 
-        /* Drawing */
+        /* Drawing/Rendering */
         glClearColor(0.2f, 0.3f, 0.3f, 1.0f);
-        glClear(GL_COLOR_BUFFER_BIT);
+        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-        glm::mat4 trans = glm::mat4(1.0);
-        trans = translate(trans, glm::vec3(0.5, -0.5, 0.0));
-        trans = glm::rotate(trans, glm::radians((float)glfwGetTime() * 1000.0f),
-                            glm::vec3(0.0, 0.0, 1.0));
-        unsigned int transformLoc = glGetUniformLocation(ourShader.ID, "transform");
-        glUniformMatrix4fv((int)transformLoc, 1, GL_FALSE, glm::value_ptr(trans));
+        std::vector<glm::vec3> cubePositions = {
+            glm::vec3( 0.0f, 0.0f, 0.0f),
+            glm::vec3( 2.0f, 5.0f, -15.0f),
+            glm::vec3(-1.5f, -2.2f, -2.5f),
+            glm::vec3(-3.8f, -2.0f, -12.3f),
+            glm::vec3( 2.4f, -0.4f, -3.5f),
+            glm::vec3(-1.7f, 3.0f, -7.5f),
+            glm::vec3( 1.3f, -2.0f, -2.5f),
+            glm::vec3( 1.5f, 2.0f, -2.5f),
+            glm::vec3( 1.5f, 0.2f, -1.5f),
+            glm::vec3(-1.3f, 1.0f, -1.5f)
+        };
 
-        ourShader.use();
-        ourShader.setFloat("mixRatio", mixRatio);
+        for (unsigned int i = 0; i < cubePositions.size(); i++)
+        {
+            auto modelMatrix = glm::mat4(1.0);
+            modelMatrix = glm::translate(modelMatrix, cubePositions[i]);
+            float angle = i % 3 == 0 ? glm::radians((float)glfwGetTime() * 100.0f) : 20.0f * (float)i;
+            modelMatrix = glm::rotate(modelMatrix, angle, glm::vec3(1.0f, 0.5f, 0.0f));
 
-        glActiveTexture(GL_TEXTURE0);
-        glBindTexture(GL_TEXTURE_2D, texture1);
-        glActiveTexture(GL_TEXTURE1);
-        glBindTexture(GL_TEXTURE_2D, texture2);
+            auto viewMatrix = glm::mat4(1.0f);
+            viewMatrix = glm::translate(viewMatrix, cameraPos);
 
-        glBindVertexArray(VAO);
-        glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, nullptr);
+            auto projectionMatrix =  glm::perspective(
+                glm::radians(45.0f), (float)fbWidth/(float)fbHeight, 0.1f, 100.0f);
 
-        trans = glm::mat4(1.0);
-        trans = translate(trans, glm::vec3(-0.5, 0.5, 0.0));
-        auto scaleVal = (float)std::sin(glfwGetTime() * 20.0f);
-        trans = glm::scale(trans, glm::vec3(scaleVal, scaleVal, scaleVal));
-        transformLoc = glGetUniformLocation(ourShader.ID, "transform");
-        glUniformMatrix4fv((int)transformLoc, 1, GL_FALSE, glm::value_ptr(trans));
-        glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, nullptr);
+            ourShader.use();
+            ourShader.setFloat("mixRatio", mixRatio);
+            ourShader.setMat4("modelMatrix", modelMatrix, 1, GL_FALSE);
+            ourShader.setMat4("viewMatrix", viewMatrix, 1, GL_FALSE);
+            ourShader.setMat4("projectionMatrix", projectionMatrix, 1, GL_FALSE);
 
-        ourShader.use();
-        ourShader.setFloat("mixRatio", mixRatio);
+            if (wireframeMode) {
+                glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+            } else {
+                glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+            }
+
+            glActiveTexture(GL_TEXTURE0);
+            glBindTexture(GL_TEXTURE_2D, texture1);
+            glActiveTexture(GL_TEXTURE1);
+            glBindTexture(GL_TEXTURE_2D, texture2);
+
+            glBindVertexArray(VAO);
+            glDrawArrays(GL_TRIANGLES, 0, 36);
+        }
 
         glfwSwapBuffers(window);
         glfwPollEvents();
@@ -215,19 +299,19 @@ int main()
     // ------------------------------------------------------------------------
     glDeleteVertexArrays(1, &VAO);
     glDeleteBuffers(1, &VBO);
-    glDeleteBuffers(1, &EBO);
+    // glDeleteBuffers(1, &EBO);
 
     glfwTerminate();
     return 0;
 }
 
 /* Will serve as a callback for GLFW whenever the window is resized */
-void framebufferSizeCallback(GLFWwindow* window, int width, int height)
+void framebufferSizeCallback(GLFWwindow *window, int width, int height)
 {
     glViewport(0, 0, width, height);
 }
 
-bool isKeyPressed(GLFWwindow* window, int key)
+bool isKeyPressed(GLFWwindow *window, int key)
 {
     return glfwGetKey(window, key) == GLFW_PRESS;
 }

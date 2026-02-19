@@ -9,6 +9,9 @@
 #include <glad/glad.h>
 #include <iostream>
 
+#include "fwd.hpp"
+#include "gtc/type_ptr.hpp"
+
 Shader::Shader(const std::string& vertexPath, const std::string& fragmentPath)
 {
     const std::string vertexShaderSource = _readFromFile(vertexPath);
@@ -46,6 +49,12 @@ void Shader::setInt(const std::string& name, int value) const
 void Shader::setFloat(const std::string& name, float value) const
 {
     glUniform1f(glGetUniformLocation(ID, name.c_str()), value);
+}
+
+void Shader::setMat4(const std::string& name, glm::mat4 value, int count, int transpose) const
+{
+    unsigned int modelLoc = glGetUniformLocation(ID, name.c_str());
+    glUniformMatrix4fv((int)modelLoc, count, transpose, glm::value_ptr(value));
 }
 
 std::string Shader::_readFromFile(const std::string& filename)
@@ -88,10 +97,9 @@ unsigned int Shader::_compileShader(const char* shaderSource,
     return shader;
 }
 
-void Shader::_linkShaderToProgram(unsigned int shader, unsigned int program,
-                                  int shaderType)
+void Shader::_linkShaderToProgram(unsigned int shader, unsigned int program, int shaderType)
 {
-    const unsigned int INFO_LOG_SIZE = 512;
+    constexpr unsigned int INFO_LOG_SIZE = 512;
     int success;
     char infoLog[INFO_LOG_SIZE];
     glGetShaderiv(shader, GL_COMPILE_STATUS, &success);
