@@ -48,6 +48,7 @@ private:
     float yaw = -90.0f;
     float pitch = 0.0f;
     float fov = 45.0f;
+    float speed = 6.5f;
     bool firstMouse = true;
 
     float mixRatio = 0.2f;
@@ -173,14 +174,12 @@ private:
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
         data = stbi_load("assets/textures/awesomeface.png", &width, &height,
                          &nChannels, 0);
-        if (data)
-        {
+        if (data) {
             glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, width, height, 0, GL_RGBA,
                          GL_UNSIGNED_BYTE, data);
             glGenerateMipmap(GL_TEXTURE_2D);
         }
-        else
-        {
+        else {
             std::cout << "Failed to load texture." << std::endl;
         }
         stbi_image_free(data);
@@ -250,30 +249,29 @@ private:
         {
             wireframeMode = !wireframeMode;
         }
-        float speed = 6.5f * deltaTime;
         if (isKeyPressed(GLFW_KEY_A))
         {
-            cameraPos -= glm::normalize(glm::cross(cameraFront, up)) * speed;
+            cameraPos -= glm::normalize(glm::cross(cameraFront, up)) * speed * deltaTime;
         }
         if (isKeyPressed(GLFW_KEY_D))
         {
-            cameraPos += glm::normalize(glm::cross(cameraFront, up)) * speed;
+            cameraPos += glm::normalize(glm::cross(cameraFront, up)) * speed * deltaTime;
         }
         if (isKeyPressed(GLFW_KEY_W))
         {
-            cameraPos += cameraFront * speed;
+            cameraPos += cameraFront * speed * deltaTime;
         }
         if (isKeyPressed(GLFW_KEY_S))
         {
-            cameraPos -= cameraFront * speed;
+            cameraPos -= cameraFront * speed * deltaTime;
         }
         if (isKeyPressed(GLFW_KEY_LEFT_SHIFT))
         {
-            cameraPos.y -= speed;
+            cameraPos.y -= speed * deltaTime;
         }
         if (isKeyPressed(GLFW_KEY_SPACE))
         {
-            cameraPos.y += speed;
+            cameraPos.y += speed * deltaTime;
         }
 
         /* Drawing/Rendering */
