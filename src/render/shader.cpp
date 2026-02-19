@@ -55,8 +55,13 @@ void Shader::setMat4(const std::string& name, glm::mat4 value, int count, int tr
 
 void Shader::setVec3(const std::string& name, glm::vec3 value) const
 {
+    setVec3(name, value.x, value.y, value.z);
+}
+
+void Shader::setVec3(const std::string& name, float x, float y, float z) const
+{
     unsigned int modelLoc = glGetUniformLocation(ID, name.c_str());
-    glUniform3f((int)modelLoc, value.x, value.y, value.z);
+    glUniform3f((int)modelLoc, x, y, z);
 }
 
 std::string Shader::_readFromFile(const std::string& filename)

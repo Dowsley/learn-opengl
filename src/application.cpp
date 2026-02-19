@@ -134,7 +134,6 @@ void Application::startup()
     defaultShader.emplace("shaders/vertexShaderDefault.glsl", "shaders/fragmentShaderPhong.glsl");
     defaultShader->use();
     defaultShader->setVec3("lightColor", glm::vec3(1.0f, 1.0f, 1.0f));
-    defaultShader->setVec3("objectColor", glm::vec3(1.0f, 0.5f, 0.31f));
 
 
     /* 4. Prepare for main loop */
@@ -212,6 +211,16 @@ void Application::process()
     defaultShader->setMat4("projectionMatrix", projectionMatrix, 1, GL_FALSE);
     defaultShader->setVec3("lightPos", lightSourcePosition);
     defaultShader->setVec3("viewPos", cam.pos);
+    defaultShader->setVec3("material.ambientColor", glm::vec3(1.0f, 0.5f, 0.31f));
+    defaultShader->setVec3("material.diffuseColor", glm::vec3(1.0f, 0.5f, 0.31f));
+    defaultShader->setVec3("material.specularColor", glm::vec3(0.5f, 0.5f, 0.5f));
+    defaultShader->setFloat("material.shininess", 32.0f);
+
+    glm::vec3 lightColor{ sin(currentFrame * 2.0f), sin(currentFrame * 0.7f), sin(currentFrame * 1.3f) };
+    defaultShader->setVec3("light.ambientColor", lightColor * glm::vec3(0.2f));
+    defaultShader->setVec3("light.diffuseColor", lightColor * glm::vec3(0.6f));
+    defaultShader->setVec3("light.specularColor", glm::vec3(1.0f, 1.0f, 1.0f));
+    defaultShader->setVec3("light.position", lightSourcePosition);
 
     glBindVertexArray(cubeVAO);
     glDrawArrays(GL_TRIANGLES, 0, 36);
@@ -221,6 +230,7 @@ void Application::process()
     modelMatrix = glm::scale(modelMatrix, glm::vec3(0.2f));
 
     lightSourceShader->use();
+    lightSourceShader->setVec3("color", lightColor);
     lightSourceShader->setMat4("modelMatrix", modelMatrix, 1, GL_FALSE);
     lightSourceShader->setMat4("viewMatrix", viewMatrix, 1, GL_FALSE);
     lightSourceShader->setMat4("projectionMatrix", projectionMatrix, 1, GL_FALSE);
