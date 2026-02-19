@@ -1,6 +1,7 @@
 #include <iostream>
 #include <vector>
 
+#include <glad/glad.h>
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/type_ptr.hpp>
 #include <stb_image.h>
@@ -37,7 +38,7 @@ void Application::startup()
     glfwSetFramebufferSizeCallback(window, framebufferSizeCallback);
     glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
     glfwSetCursorPosCallback(window, mouseCallback);
-    glfwSetScrollCallback(window, fovCallback);
+    glfwSetScrollCallback(window, scrollCallback);
 
     /* 2. GLAD: Initializing pointers */
     if (!gladLoadGLLoader((GLADloadproc)glfwGetProcAddress))
@@ -183,8 +184,8 @@ void Application::process()
     deltaTime = currentFrame - lastFrame;
     lastFrame = currentFrame;
 
-    float MIX_RATIO_INCREMENT = 0.01f;
     /* Input Processing */
+    float MIX_RATIO_INCREMENT = 0.01f;
     if (isKeyPressed(GLFW_KEY_ESCAPE))
     {
         glfwSetWindowShouldClose(window, true);
@@ -210,29 +211,17 @@ void Application::process()
         wireframeMode = !wireframeMode;
     }
     if (isKeyPressed(GLFW_KEY_A))
-    {
-        cameraPos -= glm::normalize(glm::cross(cameraFront, up)) * speed * deltaTime;
-    }
+        cam.processKeyboard(LEFT, deltaTime);
     if (isKeyPressed(GLFW_KEY_D))
-    {
-        cameraPos += glm::normalize(glm::cross(cameraFront, up)) * speed * deltaTime;
-    }
+        cam.processKeyboard(RIGHT, deltaTime);
     if (isKeyPressed(GLFW_KEY_W))
-    {
-        cameraPos += cameraFront * speed * deltaTime;
-    }
+        cam.processKeyboard(FORWARD, deltaTime);
     if (isKeyPressed(GLFW_KEY_S))
-    {
-        cameraPos -= cameraFront * speed * deltaTime;
-    }
+        cam.processKeyboard(BACKWARD, deltaTime);
     if (isKeyPressed(GLFW_KEY_LEFT_SHIFT))
-    {
-        cameraPos.y -= speed * deltaTime;
-    }
+        cam.processKeyboard(DOWN, deltaTime);
     if (isKeyPressed(GLFW_KEY_SPACE))
-    {
-        cameraPos.y += speed * deltaTime;
-    }
+        cam.processKeyboard(UP, deltaTime);
 
     /* Drawing/Rendering */
     glClearColor(0.2f, 0.3f, 0.3f, 1.0f);
@@ -251,9 +240,9 @@ void Application::process()
         glm::vec3(-1.3f, 1.0f, -1.5f)
     };
 
-    auto viewMatrix = glm::lookAt(cameraPos, cameraPos + cameraFront, up);
+    auto viewMatrix = cam.getViewMatrix();
     auto projectionMatrix = glm::perspective(
-        glm::radians(fov), (float)fbWidth/(float)fbHeight, 0.1f, 100.0f);
+        glm::radians(cam.fov), (float)fbWidth/(float)fbHeight, 0.1f, 100.0f);
 
     for (unsigned int i = 0; i < cubePositions.size(); i++)
     {
@@ -321,22 +310,11 @@ void Application::mouseCallback(GLFWwindow *window, double xPos, double yPos)
     app->lastX = xPos;
     app->lastY = yPos;
 
-    xOffset *= SENSITIVITY;
-    yOffset *= SENSITIVITY;
-
-    app->yaw += xOffset;
-    app->pitch = glm::clamp(app->pitch + yOffset, -89.0f, 89.0f);
-
-    auto direction = glm::vec3(
-        glm::cos(glm::radians(app->yaw)) * glm::cos(glm::radians(app->pitch)),
-        glm::sin(glm::radians(app->pitch)),
-        glm::sin(glm::radians(app->yaw)) * glm::cos(glm::radians(app->pitch))
-    );
-    app->cameraFront = glm::normalize(direction);
+    app->cam.processMouseMovement(xOffset, yOffset);
 }
 
-void Application::fovCallback(GLFWwindow *window, double xOffset, double yOffset)
+void Application::scrollCallback(GLFWwindow *window, double xOffset, double yOffset)
 {
     auto *app = static_cast<Application *>(glfwGetWindowUserPointer(window));
-    app->fov = glm::clamp(app->fov - (float)yOffset, 1.0f, 45.0f);
+    app->cam.processScroll((float)yOffset);
 }

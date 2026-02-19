@@ -70,5 +70,5 @@ fun
 
 - [x] plit application into a container class
 - [x] use a goddamn package manager to better organize those dependencies
-- [ ] separate camera component
-- [ ] separate input polling
+- [x] separate camera component
+- [ ] separate input polling system

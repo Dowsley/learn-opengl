@@ -4,18 +4,13 @@ project(learn_opengl)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
-# Find dependencies (provided by vcpkg)
 find_package(glfw3 CONFIG REQUIRED)
 find_package(glad CONFIG REQUIRED)
 find_package(glm CONFIG REQUIRED)
 find_path(STB_INCLUDE_DIRS "stb_image.h")
 
-add_executable(learn_opengl
-        src/main.cpp
-        src/application.cpp
-        src/render/shader.cpp
-        src/render/stb_impl.cpp
-)
+file(GLOB_RECURSE SOURCES src/*.cpp)
+add_executable(learn_opengl ${SOURCES})
 
 target_include_directories(learn_opengl PRIVATE
         ${CMAKE_SOURCE_DIR}/src

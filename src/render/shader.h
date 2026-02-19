@@ -1,5 +1,4 @@
-#ifndef LEARN_OPENGL_SHADER_H
-#define LEARN_OPENGL_SHADER_H
+#pragma once
 
 #include <string>
 
@@ -24,5 +23,3 @@ private:
     static void _linkShaderToProgram(unsigned int shader, unsigned int program,
                                      int shaderType);
 };
-
-#endif // LEARN_OPENGL_SHADER_H
