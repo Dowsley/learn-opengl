@@ -13,6 +13,7 @@
 constexpr unsigned int SCALE = 2;
 constexpr unsigned int WINDOW_WIDTH = 800 * SCALE;
 constexpr unsigned int WINDOW_HEIGHT = 600 * SCALE;
+constexpr float SENSITIVITY = 0.1f;
 
 class Application
 {
@@ -46,6 +47,7 @@ private:
     float lastY = WINDOW_HEIGHT / 2.0f;
     float yaw = -90.0f;
     float pitch = 0.0f;
+    float fov = 45.0f;
     bool firstMouse = true;
 
     float mixRatio = 0.2f;
@@ -74,6 +76,7 @@ private:
         glfwSetFramebufferSizeCallback(window, framebufferSizeCallback);
         glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
         glfwSetCursorPosCallback(window, mouseCallback);
+        glfwSetScrollCallback(window, fovCallback);
 
         /* 2. GLAD: Initializing pointers */
         if (!gladLoadGLLoader((GLADloadproc)glfwGetProcAddress))
@@ -92,48 +95,48 @@ private:
         float vertices[] = {
             // positions          // colors          // tex coords
             // Back face (z = -0.5)
-           -0.5f, -0.5f, -0.5f,  0.0f, 0.0f, 0.0f,   0.0f, 0.0f,
-            0.5f, -0.5f, -0.5f,  1.0f, 0.0f, 0.0f,   1.0f, 0.0f,
-            0.5f,  0.5f, -0.5f,  1.0f, 1.0f, 0.0f,   1.0f, 1.0f,
-            0.5f,  0.5f, -0.5f,  1.0f, 1.0f, 0.0f,   1.0f, 1.0f,
-           -0.5f,  0.5f, -0.5f,  0.0f, 1.0f, 0.0f,   0.0f, 1.0f,
-           -0.5f, -0.5f, -0.5f,  0.0f, 0.0f, 0.0f,   0.0f, 0.0f,
-            // Front face (z = 0.5)
-           -0.5f, -0.5f,  0.5f,  0.0f, 0.0f, 1.0f,   0.0f, 0.0f,
-            0.5f, -0.5f,  0.5f,  1.0f, 0.0f, 1.0f,   1.0f, 0.0f,
-            0.5f,  0.5f,  0.5f,  1.0f, 1.0f, 1.0f,   1.0f, 1.0f,
-            0.5f,  0.5f,  0.5f,  1.0f, 1.0f, 1.0f,   1.0f, 1.0f,
-           -0.5f,  0.5f,  0.5f,  0.0f, 1.0f, 1.0f,   0.0f, 1.0f,
-           -0.5f, -0.5f,  0.5f,  0.0f, 0.0f, 1.0f,   0.0f, 0.0f,
-            // Left face (x = -0.5)
-           -0.5f,  0.5f,  0.5f,  0.0f, 1.0f, 1.0f,   1.0f, 0.0f,
-           -0.5f,  0.5f, -0.5f,  0.0f, 1.0f, 0.0f,   1.0f, 1.0f,
-           -0.5f, -0.5f, -0.5f,  0.0f, 0.0f, 0.0f,   0.0f, 1.0f,
-           -0.5f, -0.5f, -0.5f,  0.0f, 0.0f, 0.0f,   0.0f, 1.0f,
-           -0.5f, -0.5f,  0.5f,  0.0f, 0.0f, 1.0f,   0.0f, 0.0f,
-           -0.5f,  0.5f,  0.5f,  0.0f, 1.0f, 1.0f,   1.0f, 0.0f,
-            // Right face (x = 0.5)
-            0.5f,  0.5f,  0.5f,  1.0f, 1.0f, 1.0f,   1.0f, 0.0f,
-            0.5f,  0.5f, -0.5f,  1.0f, 1.0f, 0.0f,   1.0f, 1.0f,
-            0.5f, -0.5f, -0.5f,  1.0f, 0.0f, 0.0f,   0.0f, 1.0f,
-            0.5f, -0.5f, -0.5f,  1.0f, 0.0f, 0.0f,   0.0f, 1.0f,
-            0.5f, -0.5f,  0.5f,  1.0f, 0.0f, 1.0f,   0.0f, 0.0f,
-            0.5f,  0.5f,  0.5f,  1.0f, 1.0f, 1.0f,   1.0f, 0.0f,
-            // Bottom face (y = -0.5)
-           -0.5f, -0.5f, -0.5f,  0.0f, 0.0f, 0.0f,   0.0f, 1.0f,
-            0.5f, -0.5f, -0.5f,  1.0f, 0.0f, 0.0f,   1.0f, 1.0f,
-            0.5f, -0.5f,  0.5f,  1.0f, 0.0f, 1.0f,   1.0f, 0.0f,
-            0.5f, -0.5f,  0.5f,  1.0f, 0.0f, 1.0f,   1.0f, 0.0f,
-           -0.5f, -0.5f,  0.5f,  0.0f, 0.0f, 1.0f,   0.0f, 0.0f,
-           -0.5f, -0.5f, -0.5f,  0.0f, 0.0f, 0.0f,   0.0f, 1.0f,
-            // Top face (y = 0.5)
-           -0.5f,  0.5f, -0.5f,  0.0f, 1.0f, 0.0f,   0.0f, 1.0f,
-            0.5f,  0.5f, -0.5f,  1.0f, 1.0f, 0.0f,   1.0f, 1.0f,
-            0.5f,  0.5f,  0.5f,  1.0f, 1.0f, 1.0f,   1.0f, 0.0f,
-            0.5f,  0.5f,  0.5f,  1.0f, 1.0f, 1.0f,   1.0f, 0.0f,
-           -0.5f,  0.5f,  0.5f,  0.0f, 1.0f, 1.0f,   0.0f, 0.0f,
-           -0.5f,  0.5f, -0.5f,  0.0f, 1.0f, 0.0f,   0.0f, 1.0f,
-        };
+            -0.5f, -0.5f, -0.5f,  0.0f, 0.0f, 0.0f,   0.0f, 0.0f,
+             0.5f, -0.5f, -0.5f,  1.0f, 0.0f, 0.0f,   1.0f, 0.0f,
+             0.5f,  0.5f, -0.5f,  1.0f, 1.0f, 0.0f,   1.0f, 1.0f,
+             0.5f,  0.5f, -0.5f,  1.0f, 1.0f, 0.0f,   1.0f, 1.0f,
+            -0.5f,  0.5f, -0.5f,  0.0f, 1.0f, 0.0f,   0.0f, 1.0f,
+            -0.5f, -0.5f, -0.5f,  0.0f, 0.0f, 0.0f,   0.0f, 0.0f,
+             // Front face (z = 0.5)
+            -0.5f, -0.5f,  0.5f,  0.0f, 0.0f, 1.0f,   0.0f, 0.0f,
+             0.5f, -0.5f,  0.5f,  1.0f, 0.0f, 1.0f,   1.0f, 0.0f,
+             0.5f,  0.5f,  0.5f,  1.0f, 1.0f, 1.0f,   1.0f, 1.0f,
+             0.5f,  0.5f,  0.5f,  1.0f, 1.0f, 1.0f,   1.0f, 1.0f,
+            -0.5f,  0.5f,  0.5f,  0.0f, 1.0f, 1.0f,   0.0f, 1.0f,
+            -0.5f, -0.5f,  0.5f,  0.0f, 0.0f, 1.0f,   0.0f, 0.0f,
+             // Left face (x = -0.5)
+            -0.5f,  0.5f,  0.5f,  0.0f, 1.0f, 1.0f,   1.0f, 0.0f,
+            -0.5f,  0.5f, -0.5f,  0.0f, 1.0f, 0.0f,   1.0f, 1.0f,
+            -0.5f, -0.5f, -0.5f,  0.0f, 0.0f, 0.0f,   0.0f, 1.0f,
+            -0.5f, -0.5f, -0.5f,  0.0f, 0.0f, 0.0f,   0.0f, 1.0f,
+            -0.5f, -0.5f,  0.5f,  0.0f, 0.0f, 1.0f,   0.0f, 0.0f,
+            -0.5f,  0.5f,  0.5f,  0.0f, 1.0f, 1.0f,   1.0f, 0.0f,
+             // Right face (x = 0.5)
+             0.5f,  0.5f,  0.5f,  1.0f, 1.0f, 1.0f,   1.0f, 0.0f,
+             0.5f,  0.5f, -0.5f,  1.0f, 1.0f, 0.0f,   1.0f, 1.0f,
+             0.5f, -0.5f, -0.5f,  1.0f, 0.0f, 0.0f,   0.0f, 1.0f,
+             0.5f, -0.5f, -0.5f,  1.0f, 0.0f, 0.0f,   0.0f, 1.0f,
+             0.5f, -0.5f,  0.5f,  1.0f, 0.0f, 1.0f,   0.0f, 0.0f,
+             0.5f,  0.5f,  0.5f,  1.0f, 1.0f, 1.0f,   1.0f, 0.0f,
+             // Bottom face (y = -0.5)
+            -0.5f, -0.5f, -0.5f,  0.0f, 0.0f, 0.0f,   0.0f, 1.0f,
+             0.5f, -0.5f, -0.5f,  1.0f, 0.0f, 0.0f,   1.0f, 1.0f,
+             0.5f, -0.5f,  0.5f,  1.0f, 0.0f, 1.0f,   1.0f, 0.0f,
+             0.5f, -0.5f,  0.5f,  1.0f, 0.0f, 1.0f,   1.0f, 0.0f,
+            -0.5f, -0.5f,  0.5f,  0.0f, 0.0f, 1.0f,   0.0f, 0.0f,
+            -0.5f, -0.5f, -0.5f,  0.0f, 0.0f, 0.0f,   0.0f, 1.0f,
+             // Top face (y = 0.5)
+            -0.5f,  0.5f, -0.5f,  0.0f, 1.0f, 0.0f,   0.0f, 1.0f,
+             0.5f,  0.5f, -0.5f,  1.0f, 1.0f, 0.0f,   1.0f, 1.0f,
+             0.5f,  0.5f,  0.5f,  1.0f, 1.0f, 1.0f,   1.0f, 0.0f,
+             0.5f,  0.5f,  0.5f,  1.0f, 1.0f, 1.0f,   1.0f, 0.0f,
+            -0.5f,  0.5f,  0.5f,  0.0f, 1.0f, 1.0f,   0.0f, 0.0f,
+            -0.5f,  0.5f, -0.5f,  0.0f, 1.0f, 0.0f,   0.0f, 1.0f,
+         };
 
         /*
          * 3.1 Texture Setup
@@ -292,7 +295,7 @@ private:
 
         auto viewMatrix = glm::lookAt(cameraPos, cameraPos + cameraFront, up);
         auto projectionMatrix = glm::perspective(
-            glm::radians(45.0f), (float)fbWidth/(float)fbHeight, 0.1f, 100.0f);
+            glm::radians(fov), (float)fbWidth/(float)fbHeight, 0.1f, 100.0f);
 
         for (unsigned int i = 0; i < cubePositions.size(); i++)
         {
@@ -346,7 +349,38 @@ private:
 
     static void mouseCallback(GLFWwindow *window, double xPos, double yPos)
     {
+        auto *app = static_cast<Application *>(glfwGetWindowUserPointer(window));
 
+        if (app->firstMouse)
+        {
+            app->lastX = xPos;
+            app->lastY = yPos;
+            app->firstMouse = false;
+        }
+
+        float xOffset = xPos - app->lastX;
+        float yOffset = app->lastY - yPos;
+        app->lastX = xPos;
+        app->lastY = yPos;
+
+        xOffset *= SENSITIVITY;
+        yOffset *= SENSITIVITY;
+
+        app->yaw += xOffset;
+        app->pitch = glm::clamp(app->pitch + yOffset, -89.0f, 89.0f);
+
+        auto direction = glm::vec3(
+            glm::cos(glm::radians(app->yaw)) * glm::cos(glm::radians(app->pitch)),
+            glm::sin(glm::radians(app->pitch)),
+            glm::sin(glm::radians(app->yaw)) * glm::cos(glm::radians(app->pitch))
+        );
+        app->cameraFront = glm::normalize(direction);
+    }
+
+    static void fovCallback(GLFWwindow *window, double xOffset, double yOffset)
+    {
+        auto *app = static_cast<Application *>(glfwGetWindowUserPointer(window));
+        app->fov = glm::clamp(app->fov - (float)yOffset, 1.0f, 45.0f);
     }
 };
 
