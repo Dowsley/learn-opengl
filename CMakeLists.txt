@@ -32,15 +32,15 @@ if(APPLE)
     )
 endif()
 
-# Copy shaders and assets to build directory
-add_custom_command(
-        TARGET learn_opengl PRE_BUILD
+# Copy shaders and assets to build directory on every build
+add_custom_target(copy_shaders ALL
         COMMAND ${CMAKE_COMMAND} -E remove_directory $<TARGET_FILE_DIR:learn_opengl>/shaders
         COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_SOURCE_DIR}/shaders $<TARGET_FILE_DIR:learn_opengl>/shaders
 )
+add_dependencies(learn_opengl copy_shaders)
 
-add_custom_command(
-        TARGET learn_opengl PRE_BUILD
+add_custom_target(copy_assets ALL
         COMMAND ${CMAKE_COMMAND} -E remove_directory $<TARGET_FILE_DIR:learn_opengl>/assets
         COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_SOURCE_DIR}/assets $<TARGET_FILE_DIR:learn_opengl>/assets
 )
+add_dependencies(learn_opengl copy_assets)

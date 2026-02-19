@@ -15,7 +15,7 @@ fun
 - [x] 9 coordinate systems
 - [x] 10 camera
 - [x] 11 review
-- [ ] 12 colors
+- [x] 12 colors
 - [ ] 13 basic lighting
 - [ ] 14 materials
 - [ ] 15 lighting maps

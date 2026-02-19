@@ -17,14 +17,14 @@ public:
 
 private:
     GLFWwindow *window = nullptr;
-    std::optional<Shader> shader;
+    std::optional<Shader> defaultShader;
+    std::optional<Shader> lightSourceShader;
 
-    unsigned int VAO = 0;
-    unsigned int VBO = 0;
-    unsigned int texture1 = 0;
-    unsigned int texture2 = 0;
+    unsigned int VBO = 0, cubeVAO = 0, lightVAO = 0;
 
     Camera cam;
+    glm::vec3 cubePosition{ 0.0f, 0.0f, 0.0f };
+    glm::vec3 lightSourcePosition{ 1.2f, 1.0f, 2.0f };
 
     float deltaTime = 0.0f;
     float lastFrame = 0.0f;

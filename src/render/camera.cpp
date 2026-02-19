@@ -1,5 +1,7 @@
 #include "camera.h"
 
+#include <glm/ext/matrix_transform.hpp>
+
 glm::mat4 Camera::getViewMatrix() const
 {
     return glm::lookAt(pos, pos + front, up);
