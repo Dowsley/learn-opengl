@@ -1,9 +1,9 @@
 cmake_minimum_required(VERSION 3.28)
 project(learn_opengl)
 
-set(CMAKE_CXX_STANDARD 11)
+set(CMAKE_CXX_STANDARD 17)
 
-set(SOURCE_FILES main.cpp includes/GLAD/src/glad.c)
+set(SOURCE_FILES application.cpp includes/GLAD/src/glad.c)
 set(HEADER_FILES shader.h)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
@@ -12,7 +12,7 @@ include_directories(include)
 include_directories(includes/GLAD/include)
 include_directories(includes/glm)
 
-add_executable(learn_opengl main.cpp
+add_executable(learn_opengl application.cpp
         includes/GLAD/src/glad.c
         shader.cpp
         includes/stb_image.cpp
