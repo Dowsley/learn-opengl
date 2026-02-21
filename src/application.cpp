@@ -183,7 +183,8 @@ void Application::process()
         cam.processKeyboard(UP, deltaTime);
 
     /* Drawing/Rendering */
-    glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
+    // glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
+    glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
     if (wireframeMode) {
@@ -197,19 +198,12 @@ void Application::process()
     auto projectionMatrix = glm::perspective(
         glm::radians(cam.fov), (float)fbWidth/(float)fbHeight, 0.1f, 100.0f);
 
-    auto modelMatrix = glm::translate(glm::mat4(1.0), cubePosition);
-    // modelMatrix = glm::rotate(modelMatrix, 0.0f, glm::vec3(1.0f, 0.5f, 0.0f));
-
     defaultShader->use();
-    defaultShader->setMat4("modelMatrix", modelMatrix, 1, GL_FALSE);
     defaultShader->setMat4("viewMatrix", viewMatrix, 1, GL_FALSE);
     defaultShader->setMat4("projectionMatrix", projectionMatrix, 1, GL_FALSE);
-    defaultShader->setVec3("lightPos", lightSourcePosition);
     defaultShader->setVec3("viewPos", cam.pos);
     defaultShader->setInt("material.diffuseMap", 0);
     defaultShader->setInt("material.specularMap", 1);
-    defaultShader->setInt("material.emissionMap", 2);
-    defaultShader->setVec3("material.specularColor", glm::vec3(0.5f, 0.5f, 0.5f));
     defaultShader->setFloat("material.shininess", 32.0f);
 
     glm::vec3 lightColor{ sin(currentFrame * 2.0f), sin(currentFrame * 0.7f), sin(currentFrame * 1.3f) };
@@ -218,18 +212,27 @@ void Application::process()
     defaultShader->setVec3("light.diffuseColor", lightColor * glm::vec3(0.6f));
     defaultShader->setVec3("light.specularColor", glm::vec3(1.0f, 1.0f, 1.0f));
     defaultShader->setVec3("light.position", lightSourcePosition);
+    defaultShader->setFloat("light.constantAttTerm", 1.0f);
+    defaultShader->setFloat("light.linearAttTerm", 0.09f);
+    defaultShader->setFloat("light.quadraticAttTerm", 0.032f);
 
     glActiveTexture(GL_TEXTURE0);
     glBindTexture(GL_TEXTURE_2D, diffuseMapTexture);
     glActiveTexture(GL_TEXTURE1);
     glBindTexture(GL_TEXTURE_2D, specularMapTexture);
-    glActiveTexture(GL_TEXTURE2);
-    glBindTexture(GL_TEXTURE_2D, emissionMapTexture);
     glBindVertexArray(cubeVAO);
-    glDrawArrays(GL_TRIANGLES, 0, 36);
+
+    for (size_t i = 0; i < cubePositions.size(); i++)
+    {
+        auto modelMatrix = glm::translate(glm::mat4(1.0f), cubePositions[i]);
+        float angle = 20.0f * (float)i;
+        modelMatrix = glm::rotate(modelMatrix, glm::radians(angle), glm::vec3(1.0f, 0.3f, 0.5f));
+        defaultShader->setMat4("modelMatrix", modelMatrix, 1, GL_FALSE);
+        glDrawArrays(GL_TRIANGLES, 0, 36);
+    }
 
     // 2. Light source
-    modelMatrix = glm::translate(glm::mat4(1.0), lightSourcePosition);
+    auto modelMatrix = glm::translate(glm::mat4(1.0f), lightSourcePosition);
     modelMatrix = glm::scale(modelMatrix, glm::vec3(0.2f));
 
     lightSourceShader->use();
@@ -268,6 +271,9 @@ bool Application::isKeyPressed(int key) const
 
 void Application::framebufferSizeCallback(GLFWwindow *window, int width, int height)
 {
+    auto *app = static_cast<Application *>(glfwGetWindowUserPointer(window));
+    app->fbWidth = width;
+    app->fbHeight = height;
     glViewport(0, 0, width, height);
 }
 

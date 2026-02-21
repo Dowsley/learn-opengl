@@ -18,7 +18,7 @@ fun
 - [x] 12 colors
 - [x] 13 basic lighting
 - [x] 14 materials
-- [ ] 15 lighting maps
+- [x] 15 lighting maps
 - [ ] 16 light casters
 - [ ] 17 multiple lights
 - [ ] 18 review
