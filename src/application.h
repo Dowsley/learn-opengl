@@ -23,8 +23,9 @@ private:
     std::optional<Shader> defaultShader;
     std::optional<Shader> lightSourceShader;
 
-    unsigned int VBO = 0, lightVAO = 0;
     std::optional<Model> backpack;
+    std::optional<Model> container;
+    std::optional<Model> cube;
 
     const glm::vec3 WHITE{1.0};
     const glm::vec3 BLACK{0.0};
@@ -50,5 +51,4 @@ private:
     void processInput();
 
     static void framebufferSizeCallback(GLFWwindow *window, int width, int height);
-    static void setupVertexAttributePointers();
 };

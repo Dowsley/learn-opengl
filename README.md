@@ -72,5 +72,5 @@ fun
 - [x] use a goddamn package manager to better organize those dependencies
 - [x] separate camera component
 - [x] separate input polling system
+- [x] dedicated objects for models
 - [ ] dedicated objects for lights
-- [ ] dedicated objects for models
