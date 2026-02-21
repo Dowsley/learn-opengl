@@ -21,6 +21,9 @@ private:
     std::optional<Shader> lightSourceShader;
 
     unsigned int VBO = 0, cubeVAO = 0, lightVAO = 0;
+    unsigned int diffuseMapTexture = 0;
+    unsigned int specularMapTexture = 0;
+    unsigned int emissionMapTexture = 0;
 
     Camera cam;
     glm::vec3 cubePosition{ 0.0f, 0.0f, 0.0f };
@@ -46,4 +49,6 @@ private:
     static void framebufferSizeCallback(GLFWwindow *window, int width, int height);
     static void mouseCallback(GLFWwindow *window, double xPos, double yPos);
     static void scrollCallback(GLFWwindow *window, double xOffset, double yOffset);
+    static void loadTexture(unsigned int &textureId, const std::string &path);
+    static void setupVertexAttributePointers();
 };
