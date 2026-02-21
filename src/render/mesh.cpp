@@ -26,6 +26,13 @@ void Mesh::draw(const Shader &shader) const
         shader.setInt((name + number).c_str(), i);
         glBindTexture(GL_TEXTURE_2D, textures[i].id);
     }
+    if (specularNr == 0)
+    {
+        unsigned int unit = textures.size();
+        glActiveTexture(GL_TEXTURE0 + unit);
+        glBindTexture(GL_TEXTURE_2D, Texture::black());
+        shader.setInt("texture_specular0", unit);
+    }
     glActiveTexture(GL_TEXTURE0);
 
     // draw the mesh

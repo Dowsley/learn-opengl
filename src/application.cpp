@@ -64,6 +64,8 @@ void Application::startup()
     backpack.emplace("assets/models/backpack/backpack.obj");
     container.emplace("assets/models/container/container.obj");
     cube.emplace("assets/models/cube/cube.obj");
+    grass.emplace("assets/models/grass/grass.obj", GL_CLAMP_TO_EDGE);
+    transparentWindow.emplace("assets/models/window/window.obj", GL_CLAMP_TO_EDGE);
 
     /* 3.2 Shader setup */
     lightSourceShader.emplace("shaders/vertexShaderDefault.glsl", "shaders/fragmentShaderLightSource.glsl");
@@ -71,6 +73,8 @@ void Application::startup()
 
     /* 4. Prepare for main loop */
     glEnable(GL_DEPTH_TEST);
+    glEnable(GL_BLEND);
+    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
     glfwGetFramebufferSize(window, &fbWidth, &fbHeight);
     glViewport(0, 0, fbWidth, fbHeight);
 }
@@ -94,7 +98,7 @@ void Application::process()
         glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
     }
 
-    // 1. Cube
+    // 1. cube
     auto viewMatrix = cam.getViewMatrix();
     auto projectionMatrix = glm::perspective(
         glm::radians(cam.fov), (float)fbWidth/(float)fbHeight, 0.1f, 100.0f);
@@ -121,7 +125,7 @@ void Application::process()
     defaultShader->setFloat("pointLights[0].linearAttTerm", 0.09f);
     defaultShader->setFloat("pointLights[0].quadraticAttTerm", 0.032f);
 
-    // Spotlight (flashlight attached to camera)
+    // spotlight (flashlight attached to camera)
     defaultShader->setVec3("spotLight.position", cam.pos);
     defaultShader->setVec3("spotLight.direction", cam.front);
     defaultShader->setFloat("spotLight.cutOff", glm::cos(glm::radians(12.5f)));
@@ -141,7 +145,19 @@ void Application::process()
     defaultShader->setMat4("modelMatrix", modelMatrix, 1, GL_FALSE);
     container->draw(*defaultShader);
 
-    // 2. Light sources
+    for (unsigned int i = 0; i < grassPositions.size(); i++)
+    {
+        modelMatrix = glm::translate(glm::mat4(1.0f), glm::vec3(-5.0f, 0.0f, -1.0f));
+        modelMatrix = glm::rotate(modelMatrix, glm::radians(180.0f), glm::vec3(1.0f, 0.0f, 0.0f));
+        defaultShader->setMat4("modelMatrix", modelMatrix, 1, GL_FALSE);
+        grass->draw(*defaultShader);
+    }
+
+    modelMatrix = glm::translate(glm::mat4(1.0f), glm::vec3(0.0f, 0.0f, 2.0f));
+    defaultShader->setMat4("modelMatrix", modelMatrix, 1, GL_FALSE);
+    transparentWindow->draw(*defaultShader);
+
+    // 3. light sources
     lightSourceShader->use();
     lightSourceShader->setMat4("viewMatrix", viewMatrix, 1, GL_FALSE);
     lightSourceShader->setMat4("projectionMatrix", projectionMatrix, 1, GL_FALSE);

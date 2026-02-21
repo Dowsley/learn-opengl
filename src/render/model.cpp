@@ -4,7 +4,8 @@
 #include <assimp/postprocess.h>
 #include <stb_image.h>
 
-Model::Model(const std::string &path)
+Model::Model(const std::string &path, GLenum wrapMode)
+    : wrapMode(wrapMode)
 {
     loadModel(path);
 }
@@ -98,7 +99,7 @@ std::vector<Texture> Model::loadMaterialTextures(const aiMaterial *mat, aiTextur
         }
         else
         {
-            Texture tex { Texture::load(filepath), typeName, filepath };
+            Texture tex { Texture::load(filepath, wrapMode), typeName, filepath };
             textureCache[filepath] = tex;
             textures.push_back(tex);
         }

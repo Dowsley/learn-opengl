@@ -25,9 +25,9 @@ fun
 - [x] 19 assimp
 - [x] 20 mesh
 - [x] 21 model
-- [ ] 22 depth testing
-- [ ] 23 stencil testing
-- [ ] 24 blending
+- [x] 22 depth testing
+- [x] 23 stencil testing
+- [x] 24 blending
 - [ ] 25 face culling
 - [ ] 26 framebuffers
 - [ ] 27 cubemaps
@@ -73,4 +73,7 @@ fun
 - [x] separate camera component
 - [x] separate input polling system
 - [x] dedicated objects for models
+- [ ] move shader uniform calls to the Model draw call
+  - will involve moving transforms to model too
+  - or define an "object" class, which can reuse the same model for drawing, but holds state. would make more sense actually.
 - [ ] dedicated objects for lights

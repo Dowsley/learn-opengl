@@ -4,14 +4,14 @@
 #include <glad/glad.h>
 #include <stb_image.h>
 
-unsigned int Texture::load(const std::string &path)
+unsigned int Texture::load(const std::string &path, GLenum wrapMode)
 {
     unsigned int textureId;
     glGenTextures(1, &textureId);
 
     glBindTexture(GL_TEXTURE_2D, textureId);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, wrapMode);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, wrapMode);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 
@@ -31,4 +31,17 @@ unsigned int Texture::load(const std::string &path)
     stbi_image_free(data);
 
     return textureId;
+}
+
+unsigned int Texture::black()
+{
+    static unsigned int id = 0;
+    if (id == 0)
+    {
+        glGenTextures(1, &id);
+        glBindTexture(GL_TEXTURE_2D, id);
+        unsigned char pixel[3] = {0, 0, 0};
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, 1, 1, 0, GL_RGB, GL_UNSIGNED_BYTE, pixel);
+    }
+    return id;
 }

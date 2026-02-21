@@ -63,6 +63,10 @@ float CalcAttenuation(vec3 position, vec3 fragPos, float constantAttTerm, float 
 
 void main()
 {
+    float alpha = texture(texture_diffuse0, TexCoords).a;
+    if (alpha < 0.1)
+        discard;
+
     vec3 normal = normalize(Normal);
     vec3 viewDir = normalize(viewPos - FragPos);
     vec3 result = CalcDirLight(dirLight, normal, viewDir);
@@ -71,7 +75,7 @@ void main()
     }
     result += CalcSpotLight(spotLight, normal, FragPos, viewDir);
 
-    FragColor = vec4(result, 1.0);
+    FragColor = vec4(result, texture(texture_diffuse0, TexCoords).a);
 }
 
 vec3 CalcDirLight(DirLight light, vec3 normal, vec3 viewDir)
