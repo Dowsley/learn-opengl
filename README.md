@@ -20,7 +20,7 @@ fun
 - [x] 14 materials
 - [x] 15 lighting maps
 - [x] 16 light casters
-- [ ] 17 multiple lights
+- [x] 17 multiple lights
 - [ ] 18 review
 - [ ] 19 assimp
 - [ ] 20 mesh

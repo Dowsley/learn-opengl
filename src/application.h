@@ -27,6 +27,7 @@ private:
     unsigned int diffuseMapTexture = 0;
     unsigned int specularMapTexture = 0;
     unsigned int emissionMapTexture = 0;
+    unsigned int blackTexture = 0;
 
     bool boringWhiteMode = true;
 

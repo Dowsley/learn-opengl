@@ -140,6 +140,12 @@ void Application::startup()
     defaultShader->setVec3("lightColor", glm::vec3(1.0f, 1.0f, 1.0f));
 
 
+    // 1x1 black texture for unused sampler slots
+    glGenTextures(1, &blackTexture);
+    glBindTexture(GL_TEXTURE_2D, blackTexture);
+    unsigned char black[] = {0, 0, 0, 255};
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, 1, 1, 0, GL_RGBA, GL_UNSIGNED_BYTE, black);
+
     /* 4. Prepare for main loop */
     glEnable(GL_DEPTH_TEST);
     glfwGetFramebufferSize(window, &fbWidth, &fbHeight);
@@ -176,6 +182,7 @@ void Application::process()
     defaultShader->setVec3("viewPos", cam.pos);
     defaultShader->setInt("material.diffuseMap", 0);
     defaultShader->setInt("material.specularMap", 1);
+    defaultShader->setInt("material.emissionMap", 2);
     defaultShader->setFloat("material.shininess", 32.0f);
 
     glm::vec3 white(1.0);
@@ -201,10 +208,24 @@ void Application::process()
         defaultShader->setFloat(prefix + "quadraticAttTerm", 0.032f);
     }
 
+    // Spotlight (flashlight attached to camera)
+    defaultShader->setVec3("spotLight.position", cam.pos);
+    defaultShader->setVec3("spotLight.direction", cam.front);
+    defaultShader->setFloat("spotLight.cutOff", glm::cos(glm::radians(12.5f)));
+    defaultShader->setFloat("spotLight.outerCutOff", glm::cos(glm::radians(17.5f)));
+    defaultShader->setVec3("spotLight.ambientColor", glm::vec3(0.0f));
+    defaultShader->setVec3("spotLight.diffuseColor", white);
+    defaultShader->setVec3("spotLight.specularColor", white);
+    defaultShader->setFloat("spotLight.constantAttTerm", 1.0f);
+    defaultShader->setFloat("spotLight.linearAttTerm", 0.027f);
+    defaultShader->setFloat("spotLight.quadraticAttTerm", 0.0028f);
+
     glActiveTexture(GL_TEXTURE0);
     glBindTexture(GL_TEXTURE_2D, diffuseMapTexture);
     glActiveTexture(GL_TEXTURE1);
     glBindTexture(GL_TEXTURE_2D, specularMapTexture);
+    glActiveTexture(GL_TEXTURE2);
+    glBindTexture(GL_TEXTURE_2D, blackTexture);
     glBindVertexArray(cubeVAO);
 
     for (size_t i = 0; i < cubePositions.size(); i++)
@@ -332,5 +353,3 @@ void Application::setupVertexAttributePointers()
     glEnableVertexAttribArray(1);
     glEnableVertexAttribArray(2);
 }
-
-
