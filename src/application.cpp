@@ -37,8 +37,18 @@ void Application::startup()
     glfwSetWindowUserPointer(window, this);
     glfwSetFramebufferSizeCallback(window, framebufferSizeCallback);
     glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
-    glfwSetCursorPosCallback(window, mouseCallback);
-    glfwSetScrollCallback(window, scrollCallback);
+
+    input.emplace(window);
+    input->createAction("move_forward", {GLFW_KEY_W});
+    input->createAction("move_backward", {GLFW_KEY_S});
+    input->createAction("move_left", {GLFW_KEY_A});
+    input->createAction("move_right", {GLFW_KEY_D});
+    input->createAction("move_up", {GLFW_KEY_SPACE});
+    input->createAction("move_down", {GLFW_KEY_LEFT_SHIFT});
+    input->createAction("quit", {GLFW_KEY_ESCAPE});
+    input->createAction("toggle_wireframe", {GLFW_KEY_LEFT_ALT});
+    input->createAction("toggle_light_placement", {GLFW_KEY_E});
+    input->createAction("toggle_light_mode", {GLFW_KEY_Q});
 
     /* 2. GLAD: Initializing pointers */
     if (!gladLoadGLLoader((GLADloadproc)glfwGetProcAddress))
@@ -143,44 +153,7 @@ void Application::process()
     deltaTime = currentFrame - lastFrame;
     lastFrame = currentFrame;
 
-    /* Input Processing */
-    float MIX_RATIO_INCREMENT = 0.01f;
-    if (isKeyPressed(GLFW_KEY_ESCAPE))
-    {
-        glfwSetWindowShouldClose(window, true);
-    }
-    if (isKeyPressed(GLFW_KEY_UP))
-    {
-        mixRatio += MIX_RATIO_INCREMENT;
-        if (mixRatio > 1.0)
-        {
-            mixRatio = 1.0;
-        }
-    }
-    if (isKeyPressed(GLFW_KEY_DOWN))
-    {
-        mixRatio -= MIX_RATIO_INCREMENT;
-        if (mixRatio < 0.0)
-        {
-            mixRatio = 0.0;
-        }
-    }
-    if (isKeyPressed(GLFW_KEY_LEFT_ALT))
-    {
-        wireframeMode = !wireframeMode;
-    }
-    if (isKeyPressed(GLFW_KEY_A))
-        cam.processKeyboard(LEFT, deltaTime);
-    if (isKeyPressed(GLFW_KEY_D))
-        cam.processKeyboard(RIGHT, deltaTime);
-    if (isKeyPressed(GLFW_KEY_W))
-        cam.processKeyboard(FORWARD, deltaTime);
-    if (isKeyPressed(GLFW_KEY_S))
-        cam.processKeyboard(BACKWARD, deltaTime);
-    if (isKeyPressed(GLFW_KEY_LEFT_SHIFT))
-        cam.processKeyboard(DOWN, deltaTime);
-    if (isKeyPressed(GLFW_KEY_SPACE))
-        cam.processKeyboard(UP, deltaTime);
+    processInput();
 
     /* Drawing/Rendering */
     // glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
@@ -206,8 +179,9 @@ void Application::process()
     defaultShader->setInt("material.specularMap", 1);
     defaultShader->setFloat("material.shininess", 32.0f);
 
-    glm::vec3 lightColor{ sin(currentFrame * 2.0f), sin(currentFrame * 0.7f), sin(currentFrame * 1.3f) };
-    // glm::vec3 lightColor{ 1.0f, 1.0f, 1.0f };
+    glm::vec3 lightColor = boringWhiteMode
+        ? glm::vec3{ 1.0f, 1.0f, 1.0f }
+        : glm::vec3{ sin(currentFrame * 2.0f), sin(currentFrame * 0.7f), sin(currentFrame * 1.3f) };
     defaultShader->setVec3("light.ambientColor", lightColor * glm::vec3(0.2f));
     defaultShader->setVec3("light.diffuseColor", lightColor * glm::vec3(0.6f));
     defaultShader->setVec3("light.specularColor", glm::vec3(1.0f, 1.0f, 1.0f));
@@ -264,9 +238,50 @@ void Application::cleanup()
     glfwTerminate();
 }
 
-bool Application::isKeyPressed(int key) const
+void Application::processInput()
 {
-    return glfwGetKey(window, key) == GLFW_PRESS;
+    input->update();
+
+    if (input->isActionJustPressed("quit"))
+        glfwSetWindowShouldClose(window, true);
+
+    if (input->isActionJustPressed("toggle_wireframe"))
+        wireframeMode = !wireframeMode;
+
+    if (input->isActionPressed("move_left"))
+        cam.processKeyboard(LEFT, deltaTime);
+    if (input->isActionPressed("move_right"))
+        cam.processKeyboard(RIGHT, deltaTime);
+    if (input->isActionPressed("move_forward"))
+        cam.processKeyboard(FORWARD, deltaTime);
+    if (input->isActionPressed("move_backward"))
+        cam.processKeyboard(BACKWARD, deltaTime);
+    if (input->isActionPressed("move_down"))
+        cam.processKeyboard(DOWN, deltaTime);
+    if (input->isActionPressed("move_up"))
+        cam.processKeyboard(UP, deltaTime);
+
+    auto mouseDelta = input->getMouseDelta();
+    if (mouseDelta.x != 0.0f || mouseDelta.y != 0.0f)
+        cam.processMouseMovement(mouseDelta.x, -mouseDelta.y);
+
+    auto scrollDelta = input->getScrollDelta();
+    if (scrollDelta.y != 0.0f)
+        cam.processScroll(scrollDelta.y);
+
+    // light config
+    if (input->isActionJustPressed("toggle_light_mode"))
+        boringWhiteMode = !boringWhiteMode;
+    if (input->isActionJustPressed("toggle_light_placement"))
+        lightPlacementMode = !lightPlacementMode;
+
+    if (lightPlacementMode) {
+        lightSourcePosition = cam.pos + cam.front*lightPlacementModeDist;
+        if (input->isMouseButtonPressed(GLFW_MOUSE_BUTTON_1))
+            lightPlacementModeDist += lightPlacementOffsetSpeed*deltaTime;
+        if (input->isMouseButtonPressed(GLFW_MOUSE_BUTTON_2))
+            lightPlacementModeDist -= lightPlacementOffsetSpeed*deltaTime;
+    }
 }
 
 void Application::framebufferSizeCallback(GLFWwindow *window, int width, int height)
@@ -277,30 +292,6 @@ void Application::framebufferSizeCallback(GLFWwindow *window, int width, int hei
     glViewport(0, 0, width, height);
 }
 
-void Application::mouseCallback(GLFWwindow *window, double xPos, double yPos)
-{
-    auto *app = static_cast<Application *>(glfwGetWindowUserPointer(window));
-
-    if (app->firstMouse)
-    {
-        app->lastX = xPos;
-        app->lastY = yPos;
-        app->firstMouse = false;
-    }
-
-    float xOffset = xPos - app->lastX;
-    float yOffset = app->lastY - yPos;
-    app->lastX = xPos;
-    app->lastY = yPos;
-
-    app->cam.processMouseMovement(xOffset, yOffset);
-}
-
-void Application::scrollCallback(GLFWwindow *window, double xOffset, double yOffset)
-{
-    auto *app = static_cast<Application *>(glfwGetWindowUserPointer(window));
-    app->cam.processScroll((float)yOffset);
-}
 
 void Application::loadTexture(unsigned int &textureId, const std::string &path)
 {
@@ -337,3 +328,5 @@ void Application::setupVertexAttributePointers()
     glEnableVertexAttribArray(1);
     glEnableVertexAttribArray(2);
 }
+
+

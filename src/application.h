@@ -6,6 +6,7 @@
 
 #include "render/camera.h"
 #include "render/shader.h"
+#include "systems/input_system.h"
 
 constexpr unsigned int SCALE = 2;
 constexpr unsigned int WINDOW_WIDTH = 800 * SCALE;
@@ -18,6 +19,7 @@ public:
 
 private:
     GLFWwindow *window = nullptr;
+    std::optional<InputSystem> input;
     std::optional<Shader> defaultShader;
     std::optional<Shader> lightSourceShader;
 
@@ -25,6 +27,11 @@ private:
     unsigned int diffuseMapTexture = 0;
     unsigned int specularMapTexture = 0;
     unsigned int emissionMapTexture = 0;
+
+    bool boringWhiteMode = true;
+    bool lightPlacementMode = false;
+    float lightPlacementModeDist = 3.0f;
+    float lightPlacementOffsetSpeed = 10.0f;
 
     Camera cam;
     std::vector<glm::vec3> cubePositions {
@@ -43,10 +50,6 @@ private:
 
     float deltaTime = 0.0f;
     float lastFrame = 0.0f;
-    float lastX = WINDOW_WIDTH / 2.0f;
-    float lastY = WINDOW_HEIGHT / 2.0f;
-    bool firstMouse = true;
-
     float mixRatio = 0.2f;
     bool wireframeMode = false;
 
@@ -56,11 +59,9 @@ private:
     void startup();
     void process();
     void cleanup();
-    bool isKeyPressed(int key) const;
+    void processInput();
 
     static void framebufferSizeCallback(GLFWwindow *window, int width, int height);
-    static void mouseCallback(GLFWwindow *window, double xPos, double yPos);
-    static void scrollCallback(GLFWwindow *window, double xOffset, double yOffset);
     static void loadTexture(unsigned int &textureId, const std::string &path);
     static void setupVertexAttributePointers();
 };
