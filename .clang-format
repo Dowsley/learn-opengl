@@ -9,3 +9,5 @@ BraceWrapping:
   AfterStruct: true
   BeforeElse: false
   BeforeCatch: false
+PointerAlignment: Right
+ReferenceAlignment: Right

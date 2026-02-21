@@ -78,5 +78,6 @@ fabric.properties
 
 .cache
 build/
+vcpkg_installed/
 
 .idea

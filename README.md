@@ -21,10 +21,10 @@ fun
 - [x] 15 lighting maps
 - [x] 16 light casters
 - [x] 17 multiple lights
-- [ ] 18 review
-- [ ] 19 assimp
-- [ ] 20 mesh
-- [ ] 21 model
+- [x] 18 review
+- [x] 19 assimp
+- [x] 20 mesh
+- [x] 21 model
 - [ ] 22 depth testing
 - [ ] 23 stencil testing
 - [ ] 24 blending

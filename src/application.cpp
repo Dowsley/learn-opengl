@@ -4,8 +4,6 @@
 #include <glad/glad.h>
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/type_ptr.hpp>
-#include <stb_image.h>
-
 #include "application.h"
 
 void Application::run()
@@ -48,6 +46,8 @@ void Application::startup()
     input->createAction("quit", {GLFW_KEY_ESCAPE});
     input->createAction("toggle_wireframe", {GLFW_KEY_LEFT_ALT});
     input->createAction("toggle_light_mode", {GLFW_KEY_Q});
+    input->createAction("toggle_light_placement", {GLFW_KEY_E});
+    input->createAction("toggle_flashlight", {GLFW_KEY_F});
 
     /* 2. GLAD: Initializing pointers */
     if (!gladLoadGLLoader((GLADloadproc)glfwGetProcAddress))
@@ -61,50 +61,40 @@ void Application::startup()
     std::cout << "Maximum number of attributes: " << nAttributes << std::endl;
 
     /* 3. OpenGL: Initializing shaders and objects */
-    loadTexture(diffuseMapTexture, "assets/textures/container2.png");
-    loadTexture(specularMapTexture, "assets/textures/container2_specular.png");
-    loadTexture(emissionMapTexture, "assets/textures/matrix.jpg");
+    backpack.emplace("assets/models/backpack/backpack.obj");
 
-    // Cube (36 vertices: 6 faces x 2 triangles x 3 vertices)
-    // Color per corner: (r,g,b) = (x+0.5, y+0.5, z+0.5)
     float vertices[] = {
         // positions          // normals           // texcoords
-        // Back face
         -0.5f, -0.5f, -0.5f,  0.0f,  0.0f, -1.0f,  0.0f, 0.0f,
          0.5f, -0.5f, -0.5f,  0.0f,  0.0f, -1.0f,  1.0f, 0.0f,
          0.5f,  0.5f, -0.5f,  0.0f,  0.0f, -1.0f,  1.0f, 1.0f,
          0.5f,  0.5f, -0.5f,  0.0f,  0.0f, -1.0f,  1.0f, 1.0f,
         -0.5f,  0.5f, -0.5f,  0.0f,  0.0f, -1.0f,  0.0f, 1.0f,
         -0.5f, -0.5f, -0.5f,  0.0f,  0.0f, -1.0f,  0.0f, 0.0f,
-        // Front face
         -0.5f, -0.5f,  0.5f,  0.0f,  0.0f,  1.0f,  0.0f, 0.0f,
          0.5f, -0.5f,  0.5f,  0.0f,  0.0f,  1.0f,  1.0f, 0.0f,
          0.5f,  0.5f,  0.5f,  0.0f,  0.0f,  1.0f,  1.0f, 1.0f,
          0.5f,  0.5f,  0.5f,  0.0f,  0.0f,  1.0f,  1.0f, 1.0f,
         -0.5f,  0.5f,  0.5f,  0.0f,  0.0f,  1.0f,  0.0f, 1.0f,
         -0.5f, -0.5f,  0.5f,  0.0f,  0.0f,  1.0f,  0.0f, 0.0f,
-        // Left face
         -0.5f,  0.5f,  0.5f, -1.0f,  0.0f,  0.0f,  1.0f, 0.0f,
         -0.5f,  0.5f, -0.5f, -1.0f,  0.0f,  0.0f,  1.0f, 1.0f,
         -0.5f, -0.5f, -0.5f, -1.0f,  0.0f,  0.0f,  0.0f, 1.0f,
         -0.5f, -0.5f, -0.5f, -1.0f,  0.0f,  0.0f,  0.0f, 1.0f,
         -0.5f, -0.5f,  0.5f, -1.0f,  0.0f,  0.0f,  0.0f, 0.0f,
         -0.5f,  0.5f,  0.5f, -1.0f,  0.0f,  0.0f,  1.0f, 0.0f,
-        // Right face
          0.5f,  0.5f,  0.5f,  1.0f,  0.0f,  0.0f,  1.0f, 0.0f,
          0.5f,  0.5f, -0.5f,  1.0f,  0.0f,  0.0f,  1.0f, 1.0f,
          0.5f, -0.5f, -0.5f,  1.0f,  0.0f,  0.0f,  0.0f, 1.0f,
          0.5f, -0.5f, -0.5f,  1.0f,  0.0f,  0.0f,  0.0f, 1.0f,
          0.5f, -0.5f,  0.5f,  1.0f,  0.0f,  0.0f,  0.0f, 0.0f,
          0.5f,  0.5f,  0.5f,  1.0f,  0.0f,  0.0f,  1.0f, 0.0f,
-        // Bottom face
         -0.5f, -0.5f, -0.5f,  0.0f, -1.0f,  0.0f,  0.0f, 1.0f,
          0.5f, -0.5f, -0.5f,  0.0f, -1.0f,  0.0f,  1.0f, 1.0f,
          0.5f, -0.5f,  0.5f,  0.0f, -1.0f,  0.0f,  1.0f, 0.0f,
          0.5f, -0.5f,  0.5f,  0.0f, -1.0f,  0.0f,  1.0f, 0.0f,
         -0.5f, -0.5f,  0.5f,  0.0f, -1.0f,  0.0f,  0.0f, 0.0f,
         -0.5f, -0.5f, -0.5f,  0.0f, -1.0f,  0.0f,  0.0f, 1.0f,
-        // Top face
         -0.5f,  0.5f, -0.5f,  0.0f,  1.0f,  0.0f,  0.0f, 1.0f,
          0.5f,  0.5f, -0.5f,  0.0f,  1.0f,  0.0f,  1.0f, 1.0f,
          0.5f,  0.5f,  0.5f,  0.0f,  1.0f,  0.0f,  1.0f, 0.0f,
@@ -113,38 +103,19 @@ void Application::startup()
         -0.5f,  0.5f, -0.5f,  0.0f,  1.0f,  0.0f,  0.0f, 1.0f,
     };
 
-    /*
-     * 3.1 buffer objects setup
-     * */
-    /** 3.2.1: cubeVAO **/
+    /** lightVAO **/
     glGenBuffers(1, &VBO);
-    glGenVertexArrays(1, &cubeVAO);
+    glGenVertexArrays(1, &lightVAO);
 
     glBindBuffer(GL_ARRAY_BUFFER, VBO);
     glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
 
-    glBindVertexArray(cubeVAO);
-    setupVertexAttributePointers();
-
-    /** 3.2.2: lightVAO **/
-    glGenVertexArrays(1, &lightVAO);
     glBindVertexArray(lightVAO);
-
-    glBindBuffer(GL_ARRAY_BUFFER, VBO);
     setupVertexAttributePointers();
 
     /* 3.2 Shader setup */
     lightSourceShader.emplace("shaders/vertexShaderDefault.glsl", "shaders/fragmentShaderLightSource.glsl");
     defaultShader.emplace("shaders/vertexShaderDefault.glsl", "shaders/fragmentShaderPhong.glsl");
-    defaultShader->use();
-    defaultShader->setVec3("lightColor", glm::vec3(1.0f, 1.0f, 1.0f));
-
-
-    // 1x1 black texture for unused sampler slots
-    glGenTextures(1, &blackTexture);
-    glBindTexture(GL_TEXTURE_2D, blackTexture);
-    unsigned char black[] = {0, 0, 0, 255};
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, 1, 1, 0, GL_RGBA, GL_UNSIGNED_BYTE, black);
 
     /* 4. Prepare for main loop */
     glEnable(GL_DEPTH_TEST);
@@ -180,62 +151,39 @@ void Application::process()
     defaultShader->setMat4("viewMatrix", viewMatrix, 1, GL_FALSE);
     defaultShader->setMat4("projectionMatrix", projectionMatrix, 1, GL_FALSE);
     defaultShader->setVec3("viewPos", cam.pos);
-    defaultShader->setInt("material.diffuseMap", 0);
-    defaultShader->setInt("material.specularMap", 1);
-    defaultShader->setInt("material.emissionMap", 2);
-    defaultShader->setFloat("material.shininess", 32.0f);
+    defaultShader->setFloat("shininess", 32.0f);
 
-    glm::vec3 white(1.0);
     defaultShader->setVec3("dirLight.direction", { 0.0f, -1.0f, 0.0f });
-    defaultShader->setVec3("dirLight.ambientColor", white * glm::vec3(.1f));
-    defaultShader->setVec3("dirLight.diffuseColor", white * glm::vec3(1.0f));
-    defaultShader->setVec3("dirLight.specularColor", white * glm::vec3(1.0f));
+    defaultShader->setVec3("dirLight.ambientColor", WHITE * glm::vec3(.1f));
+    defaultShader->setVec3("dirLight.diffuseColor", WHITE * glm::vec3(1.0f));
+    defaultShader->setVec3("dirLight.specularColor", WHITE * glm::vec3(1.0f));
 
     glm::vec3 pointLightColor = boringWhiteMode
-        ? white
+        ? WHITE
         : glm::vec3{ sin(currentFrame * 2.0f), sin(currentFrame * 0.7f), sin(currentFrame * 1.3f) };
-    for (size_t i = 0; i < pointLightPositions.size(); i++)
-    {
-        auto pointPos = pointLightPositions[i];
-
-        std::string prefix = "pointLights[" + std::to_string(i) + "].";
-        defaultShader->setVec3(prefix + "position", pointPos);
-        defaultShader->setVec3(prefix + "ambientColor", pointLightColor * glm::vec3(0.02f));
-        defaultShader->setVec3(prefix + "diffuseColor", pointLightColor * glm::vec3(0.6f));
-        defaultShader->setVec3(prefix + "specularColor", glm::vec3(1.0f, 1.0f, 1.0f));
-        defaultShader->setFloat(prefix + "constantAttTerm", 1.0f);
-        defaultShader->setFloat(prefix + "linearAttTerm", 0.09f);
-        defaultShader->setFloat(prefix + "quadraticAttTerm", 0.032f);
-    }
+    defaultShader->setVec3("pointLights[0].position", pointLightPos);
+    defaultShader->setVec3("pointLights[0].ambientColor", pointLightColor * glm::vec3(0.02f));
+    defaultShader->setVec3("pointLights[0].diffuseColor", pointLightColor * glm::vec3(0.6f));
+    defaultShader->setVec3("pointLights[0].specularColor", glm::vec3(1.0f, 1.0f, 1.0f));
+    defaultShader->setFloat("pointLights[0].constantAttTerm", 1.0f);
+    defaultShader->setFloat("pointLights[0].linearAttTerm", 0.09f);
+    defaultShader->setFloat("pointLights[0].quadraticAttTerm", 0.032f);
 
     // Spotlight (flashlight attached to camera)
     defaultShader->setVec3("spotLight.position", cam.pos);
     defaultShader->setVec3("spotLight.direction", cam.front);
     defaultShader->setFloat("spotLight.cutOff", glm::cos(glm::radians(12.5f)));
     defaultShader->setFloat("spotLight.outerCutOff", glm::cos(glm::radians(17.5f)));
-    defaultShader->setVec3("spotLight.ambientColor", glm::vec3(0.0f));
-    defaultShader->setVec3("spotLight.diffuseColor", white);
-    defaultShader->setVec3("spotLight.specularColor", white);
+    defaultShader->setVec3("spotLight.ambientColor", BLACK);
+    defaultShader->setVec3("spotLight.diffuseColor", flashlightOn ? WHITE : BLACK);
+    defaultShader->setVec3("spotLight.specularColor", flashlightOn ? WHITE : BLACK);
     defaultShader->setFloat("spotLight.constantAttTerm", 1.0f);
     defaultShader->setFloat("spotLight.linearAttTerm", 0.027f);
     defaultShader->setFloat("spotLight.quadraticAttTerm", 0.0028f);
 
-    glActiveTexture(GL_TEXTURE0);
-    glBindTexture(GL_TEXTURE_2D, diffuseMapTexture);
-    glActiveTexture(GL_TEXTURE1);
-    glBindTexture(GL_TEXTURE_2D, specularMapTexture);
-    glActiveTexture(GL_TEXTURE2);
-    glBindTexture(GL_TEXTURE_2D, blackTexture);
-    glBindVertexArray(cubeVAO);
-
-    for (size_t i = 0; i < cubePositions.size(); i++)
-    {
-        auto modelMatrix = glm::translate(glm::mat4(1.0f), cubePositions[i]);
-        float angle = 20.0f * (float)i;
-        modelMatrix = glm::rotate(modelMatrix, glm::radians(angle), glm::vec3(1.0f, 0.3f, 0.5f));
-        defaultShader->setMat4("modelMatrix", modelMatrix, 1, GL_FALSE);
-        glDrawArrays(GL_TRIANGLES, 0, 36);
-    }
+    auto modelMatrix = glm::mat4(1.0f);
+    defaultShader->setMat4("modelMatrix", modelMatrix, 1, GL_FALSE);
+    backpack->draw(*defaultShader);
 
     // 2. Light sources
     lightSourceShader->use();
@@ -249,15 +197,11 @@ void Application::process()
     }
 
     glBindVertexArray(lightVAO);
-    for (auto pointPos : pointLightPositions)
-    {
-        auto modelMatrix = glm::translate(glm::mat4(1.0f), pointPos);
-        modelMatrix = glm::scale(modelMatrix, glm::vec3(0.2f));
-
-        lightSourceShader->setVec3("color", pointLightColor);
-        lightSourceShader->setMat4("modelMatrix", modelMatrix, 1, GL_FALSE);
-        glDrawArrays(GL_TRIANGLES, 0, 36);
-    }
+    modelMatrix = glm::translate(glm::mat4(1.0f), pointLightPos);
+    modelMatrix = glm::scale(modelMatrix, glm::vec3(0.2f));
+    lightSourceShader->setVec3("color", pointLightColor);
+    lightSourceShader->setMat4("modelMatrix", modelMatrix, 1, GL_FALSE);
+    glDrawArrays(GL_TRIANGLES, 0, 36);
 
     glfwSwapBuffers(window);
     glfwPollEvents();
@@ -266,7 +210,6 @@ void Application::process()
 void Application::cleanup()
 {
     glDeleteVertexArrays(1, &lightVAO);
-    glDeleteVertexArrays(1, &cubeVAO);
     glDeleteBuffers(1, &VBO);
     defaultShader.reset();
     lightSourceShader.reset();
@@ -305,8 +248,21 @@ void Application::processInput()
         cam.processScroll(scrollDelta.y);
 
     // light config
+    if (input->isActionJustPressed("toggle_flashlight"))
+        flashlightOn = !flashlightOn;
     if (input->isActionJustPressed("toggle_light_mode"))
         boringWhiteMode = !boringWhiteMode;
+
+    if (input->isActionJustPressed("toggle_light_placement"))
+        lightPlacementMode = !lightPlacementMode;
+
+    if (lightPlacementMode) {
+        pointLightPos = cam.pos + cam.front*lightPlacementModeDist;
+        if (input->isMouseButtonPressed(GLFW_MOUSE_BUTTON_1))
+            lightPlacementModeDist += lightPlacementOffsetSpeed*deltaTime;
+        if (input->isMouseButtonPressed(GLFW_MOUSE_BUTTON_2))
+            lightPlacementModeDist -= lightPlacementOffsetSpeed*deltaTime;
+    }
 }
 
 void Application::framebufferSizeCallback(GLFWwindow *window, int width, int height)
@@ -318,35 +274,10 @@ void Application::framebufferSizeCallback(GLFWwindow *window, int width, int hei
 }
 
 
-void Application::loadTexture(unsigned int &textureId, const std::string &path)
-{
-    glGenTextures(1, &textureId);
-
-    glBindTexture(GL_TEXTURE_2D, textureId);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-
-    auto format = path.ends_with(".png") ? GL_RGBA : GL_RGB;
-    int width, height, nChannels;
-    stbi_set_flip_vertically_on_load(true);
-    unsigned char *data = stbi_load(path.c_str(), &width, &height, &nChannels, 0);
-    if (data)
-    {
-        glTexImage2D(GL_TEXTURE_2D, 0, format, width, height, 0, format, GL_UNSIGNED_BYTE, data);
-        glGenerateMipmap(GL_TEXTURE_2D);
-    }
-    else
-    {
-        std::cout << "Failed to load texture." << std::endl;
-    }
-    stbi_image_free(data);
-}
 
 void Application::setupVertexAttributePointers()
 {
-    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*) 0);
+    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*) nullptr);
     glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)(3 * sizeof(float)));
     glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)(6 * sizeof(float)));
     glEnableVertexAttribArray(0);

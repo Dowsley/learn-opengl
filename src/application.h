@@ -1,10 +1,10 @@
 #pragma once
 
 #include <optional>
-#include <vector>
 #include <GLFW/glfw3.h>
 
 #include "render/camera.h"
+#include "render/model.h"
 #include "render/shader.h"
 #include "systems/input_system.h"
 
@@ -23,33 +23,19 @@ private:
     std::optional<Shader> defaultShader;
     std::optional<Shader> lightSourceShader;
 
-    unsigned int VBO = 0, cubeVAO = 0, lightVAO = 0;
-    unsigned int diffuseMapTexture = 0;
-    unsigned int specularMapTexture = 0;
-    unsigned int emissionMapTexture = 0;
-    unsigned int blackTexture = 0;
+    unsigned int VBO = 0, lightVAO = 0;
+    std::optional<Model> backpack;
 
+    const glm::vec3 WHITE{1.0};
+    const glm::vec3 BLACK{0.0};
     bool boringWhiteMode = true;
+    bool flashlightOn = false;
 
     Camera cam;
-    std::vector<glm::vec3> cubePositions {
-        { 0.0f,  0.0f,  0.0f},
-        { 2.0f,  5.0f, -15.0f},
-        {-1.5f, -2.2f, -2.5f},
-        {-3.8f, -2.0f, -12.3f},
-        { 2.4f, -0.4f, -3.5f},
-        {-1.7f,  3.0f, -7.5f},
-        { 1.3f, -2.0f, -2.5f},
-        { 1.5f,  2.0f, -2.5f},
-        { 1.5f,  0.2f, -1.5f},
-        {-1.3f,  1.0f, -1.5f},
-    };
-    std::vector<glm::vec3> pointLightPositions = {
-        { 0.7f, 0.2f, 2.0f },
-        { 2.3f, -3.3f, -4.0f },
-        { -4.0f, 2.0f, -12.0f },
-        { 0.0f, 0.0f, -3.0f }
-    };
+    glm::vec3 pointLightPos = { 0.7f, 0.2f, 2.0f };
+    bool lightPlacementMode = false;
+    float lightPlacementModeDist = 3.0f;
+    float lightPlacementOffsetSpeed = 10.0f;
 
     float deltaTime = 0.0f;
     float lastFrame = 0.0f;
@@ -64,6 +50,5 @@ private:
     void processInput();
 
     static void framebufferSizeCallback(GLFWwindow *window, int width, int height);
-    static void loadTexture(unsigned int &textureId, const std::string &path);
     static void setupVertexAttributePointers();
 };

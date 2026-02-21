@@ -7,6 +7,7 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 find_package(glfw3 CONFIG REQUIRED)
 find_package(glad CONFIG REQUIRED)
 find_package(glm CONFIG REQUIRED)
+find_package(assimp CONFIG REQUIRED)
 find_path(STB_INCLUDE_DIRS "stb_image.h")
 
 file(GLOB_RECURSE SOURCES src/*.cpp)
@@ -21,6 +22,7 @@ target_link_libraries(learn_opengl PRIVATE
         glfw
         glad::glad
         glm::glm
+        assimp::assimp
 )
 
 if(APPLE)

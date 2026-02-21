@@ -1,11 +1,9 @@
 #version 330 core
 
-struct Material {
-    sampler2D diffuseMap;
-    sampler2D specularMap;
-    sampler2D emissionMap;
-    float shininess;
-};
+// material textures
+uniform sampler2D texture_diffuse0;
+uniform sampler2D texture_specular0;
+uniform float shininess;
 
 struct SpotLight {
     vec3 position;
@@ -41,7 +39,7 @@ struct PointLight {
     float linearAttTerm;
     float quadraticAttTerm;
 };
-#define NR_POINT_LIGHTS 4
+#define NR_POINT_LIGHTS 1
 
 in vec3 FragPos;
 in vec3 Normal;
@@ -50,7 +48,6 @@ in vec2 TexCoords;
 out vec4 FragColor;
 
 uniform vec3 viewPos;
-uniform Material material;
 uniform DirLight dirLight;
 uniform PointLight pointLights[NR_POINT_LIGHTS];
 uniform SpotLight spotLight;
@@ -74,9 +71,6 @@ void main()
     }
     result += CalcSpotLight(spotLight, normal, FragPos, viewDir);
 
-    vec3 emission = texture(material.emissionMap, TexCoords).rgb;
-    result += emission;
-
     FragColor = vec4(result, 1.0);
 }
 
@@ -93,19 +87,19 @@ vec3 CalcDirLight(DirLight light, vec3 normal, vec3 viewDir)
 
 vec3 CalcAmbient(vec3 ambientColor)
 {
-    return ambientColor * vec3(texture(material.diffuseMap, TexCoords));
+    return ambientColor * vec3(texture(texture_diffuse0, TexCoords));
 }
 
 vec3 CalcDiffuse(vec3 diffuseColor, vec3 lightDir, vec3 normal)
 {
     float alignmentWithLightSource = max(dot(normal, lightDir), 0.0);
-    return diffuseColor * alignmentWithLightSource * vec3(texture(material.diffuseMap, TexCoords));
+    return diffuseColor * alignmentWithLightSource * vec3(texture(texture_diffuse0, TexCoords));
 }
 
 vec3 CalcSpecular(vec3 specularColor, vec3 reflectionDir, vec3 viewDir)
 {
-    float spec = pow(max(dot(viewDir, reflectionDir), 0.0), material.shininess);
-    return specularColor * spec * vec3(texture(material.specularMap, TexCoords));
+    float spec = pow(max(dot(viewDir, reflectionDir), 0.0), shininess);
+    return specularColor * spec * vec3(texture(texture_specular0, TexCoords));
 }
 
 float CalcAttenuation(vec3 position, vec3 fragPos, float constantAttTerm, float linearAttTerm, float quadraticAttTerm)
