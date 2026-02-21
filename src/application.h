@@ -29,9 +29,6 @@ private:
     unsigned int emissionMapTexture = 0;
 
     bool boringWhiteMode = true;
-    bool lightPlacementMode = false;
-    float lightPlacementModeDist = 3.0f;
-    float lightPlacementOffsetSpeed = 10.0f;
 
     Camera cam;
     std::vector<glm::vec3> cubePositions {
@@ -46,11 +43,15 @@ private:
         { 1.5f,  0.2f, -1.5f},
         {-1.3f,  1.0f, -1.5f},
     };
-    glm::vec3 lightSourcePosition{ 1.2f, 1.0f, 2.0f };
+    std::vector<glm::vec3> pointLightPositions = {
+        { 0.7f, 0.2f, 2.0f },
+        { 2.3f, -3.3f, -4.0f },
+        { -4.0f, 2.0f, -12.0f },
+        { 0.0f, 0.0f, -3.0f }
+    };
 
     float deltaTime = 0.0f;
     float lastFrame = 0.0f;
-    float mixRatio = 0.2f;
     bool wireframeMode = false;
 
     int fbWidth = 0;

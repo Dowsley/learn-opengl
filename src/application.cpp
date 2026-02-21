@@ -47,7 +47,6 @@ void Application::startup()
     input->createAction("move_down", {GLFW_KEY_LEFT_SHIFT});
     input->createAction("quit", {GLFW_KEY_ESCAPE});
     input->createAction("toggle_wireframe", {GLFW_KEY_LEFT_ALT});
-    input->createAction("toggle_light_placement", {GLFW_KEY_E});
     input->createAction("toggle_light_mode", {GLFW_KEY_Q});
 
     /* 2. GLAD: Initializing pointers */
@@ -179,16 +178,28 @@ void Application::process()
     defaultShader->setInt("material.specularMap", 1);
     defaultShader->setFloat("material.shininess", 32.0f);
 
-    glm::vec3 lightColor = boringWhiteMode
-        ? glm::vec3{ 1.0f, 1.0f, 1.0f }
+    glm::vec3 white(1.0);
+    defaultShader->setVec3("dirLight.direction", { 0.0f, -1.0f, 0.0f });
+    defaultShader->setVec3("dirLight.ambientColor", white * glm::vec3(.1f));
+    defaultShader->setVec3("dirLight.diffuseColor", white * glm::vec3(1.0f));
+    defaultShader->setVec3("dirLight.specularColor", white * glm::vec3(1.0f));
+
+    glm::vec3 pointLightColor = boringWhiteMode
+        ? white
         : glm::vec3{ sin(currentFrame * 2.0f), sin(currentFrame * 0.7f), sin(currentFrame * 1.3f) };
-    defaultShader->setVec3("light.ambientColor", lightColor * glm::vec3(0.2f));
-    defaultShader->setVec3("light.diffuseColor", lightColor * glm::vec3(0.6f));
-    defaultShader->setVec3("light.specularColor", glm::vec3(1.0f, 1.0f, 1.0f));
-    defaultShader->setVec3("light.position", lightSourcePosition);
-    defaultShader->setFloat("light.constantAttTerm", 1.0f);
-    defaultShader->setFloat("light.linearAttTerm", 0.09f);
-    defaultShader->setFloat("light.quadraticAttTerm", 0.032f);
+    for (size_t i = 0; i < pointLightPositions.size(); i++)
+    {
+        auto pointPos = pointLightPositions[i];
+
+        std::string prefix = "pointLights[" + std::to_string(i) + "].";
+        defaultShader->setVec3(prefix + "position", pointPos);
+        defaultShader->setVec3(prefix + "ambientColor", pointLightColor * glm::vec3(0.02f));
+        defaultShader->setVec3(prefix + "diffuseColor", pointLightColor * glm::vec3(0.6f));
+        defaultShader->setVec3(prefix + "specularColor", glm::vec3(1.0f, 1.0f, 1.0f));
+        defaultShader->setFloat(prefix + "constantAttTerm", 1.0f);
+        defaultShader->setFloat(prefix + "linearAttTerm", 0.09f);
+        defaultShader->setFloat(prefix + "quadraticAttTerm", 0.032f);
+    }
 
     glActiveTexture(GL_TEXTURE0);
     glBindTexture(GL_TEXTURE_2D, diffuseMapTexture);
@@ -205,13 +216,8 @@ void Application::process()
         glDrawArrays(GL_TRIANGLES, 0, 36);
     }
 
-    // 2. Light source
-    auto modelMatrix = glm::translate(glm::mat4(1.0f), lightSourcePosition);
-    modelMatrix = glm::scale(modelMatrix, glm::vec3(0.2f));
-
+    // 2. Light sources
     lightSourceShader->use();
-    lightSourceShader->setVec3("color", lightColor);
-    lightSourceShader->setMat4("modelMatrix", modelMatrix, 1, GL_FALSE);
     lightSourceShader->setMat4("viewMatrix", viewMatrix, 1, GL_FALSE);
     lightSourceShader->setMat4("projectionMatrix", projectionMatrix, 1, GL_FALSE);
 
@@ -222,7 +228,15 @@ void Application::process()
     }
 
     glBindVertexArray(lightVAO);
-    glDrawArrays(GL_TRIANGLES, 0, 36);
+    for (auto pointPos : pointLightPositions)
+    {
+        auto modelMatrix = glm::translate(glm::mat4(1.0f), pointPos);
+        modelMatrix = glm::scale(modelMatrix, glm::vec3(0.2f));
+
+        lightSourceShader->setVec3("color", pointLightColor);
+        lightSourceShader->setMat4("modelMatrix", modelMatrix, 1, GL_FALSE);
+        glDrawArrays(GL_TRIANGLES, 0, 36);
+    }
 
     glfwSwapBuffers(window);
     glfwPollEvents();
@@ -272,16 +286,6 @@ void Application::processInput()
     // light config
     if (input->isActionJustPressed("toggle_light_mode"))
         boringWhiteMode = !boringWhiteMode;
-    if (input->isActionJustPressed("toggle_light_placement"))
-        lightPlacementMode = !lightPlacementMode;
-
-    if (lightPlacementMode) {
-        lightSourcePosition = cam.pos + cam.front*lightPlacementModeDist;
-        if (input->isMouseButtonPressed(GLFW_MOUSE_BUTTON_1))
-            lightPlacementModeDist += lightPlacementOffsetSpeed*deltaTime;
-        if (input->isMouseButtonPressed(GLFW_MOUSE_BUTTON_2))
-            lightPlacementModeDist -= lightPlacementOffsetSpeed*deltaTime;
-    }
 }
 
 void Application::framebufferSizeCallback(GLFWwindow *window, int width, int height)

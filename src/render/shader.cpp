@@ -19,7 +19,7 @@ Shader::Shader(const std::string &vertexPath, const std::string &fragmentPath)
         _compileShader(fragmentShaderSource.c_str(), GL_FRAGMENT_SHADER);
 
     ID = glCreateProgram();
-    _linkShaderToProgram(vertexShader, ID, GL_FRAGMENT_SHADER);
+    _linkShaderToProgram(vertexShader, ID, GL_VERTEX_SHADER);
     _linkShaderToProgram(fragmentShader, ID, GL_FRAGMENT_SHADER);
 
     glLinkProgram(ID);

@@ -19,7 +19,7 @@ fun
 - [x] 13 basic lighting
 - [x] 14 materials
 - [x] 15 lighting maps
-- [ ] 16 light casters
+- [x] 16 light casters
 - [ ] 17 multiple lights
 - [ ] 18 review
 - [ ] 19 assimp
@@ -71,4 +71,6 @@ fun
 - [x] plit application into a container class
 - [x] use a goddamn package manager to better organize those dependencies
 - [x] separate camera component
-- [ ] separate input polling system
+- [x] separate input polling system
+- [ ] dedicated objects for lights
+- [ ] dedicated objects for models
