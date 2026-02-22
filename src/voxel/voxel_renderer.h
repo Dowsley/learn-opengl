@@ -18,12 +18,20 @@ private:
     GLuint quadVBO = 0;
     Shader shader;
 
-    // Half-res FBO for raymarching
+    // Half-res HDR FBO for raymarching
     GLuint fbo = 0;
     GLuint fboColor = 0;
     int fboWidth = 0;
     int fboHeight = 0;
 
+    // Post-processing (bloom)
+    Shader postShader;
+    GLuint bloomFBO[2] = {0, 0};
+    GLuint bloomColor[2] = {0, 0};
+    int bloomWidth = 0;
+    int bloomHeight = 0;
+
     void setupQuad();
     void setupFBO(int width, int height);
+    void setupBloomFBOs(int width, int height);
 };

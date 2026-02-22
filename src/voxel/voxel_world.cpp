@@ -1,6 +1,54 @@
 #include "voxel_world.h"
 #include <cmath>
 #include <cstdlib>
+#include <algorithm>
+
+// Hash-based value noise (no external dependencies)
+static float hash(int x, int z)
+{
+    int n = x * 73856093 ^ z * 19349663;
+    n = (n << 13) ^ n;
+    return 1.0f - static_cast<float>((n * (n * n * 15731 + 789221) + 1376312589) & 0x7fffffff) / 1073741824.0f;
+}
+
+static float smoothNoise(float x, float z)
+{
+    int ix = static_cast<int>(std::floor(x));
+    int iz = static_cast<int>(std::floor(z));
+    float fx = x - std::floor(x);
+    float fz = z - std::floor(z);
+
+    // Quintic interpolation (Perlin's improved curve)
+    fx = fx * fx * fx * (fx * (fx * 6.0f - 15.0f) + 10.0f);
+    fz = fz * fz * fz * (fz * (fz * 6.0f - 15.0f) + 10.0f);
+
+    float v00 = hash(ix, iz);
+    float v10 = hash(ix + 1, iz);
+    float v01 = hash(ix, iz + 1);
+    float v11 = hash(ix + 1, iz + 1);
+
+    float i0 = v00 + (v10 - v00) * fx;
+    float i1 = v01 + (v11 - v01) * fx;
+    return i0 + (i1 - i0) * fz;
+}
+
+static float fbm(float x, float z, int octaves)
+{
+    float value = 0.0f;
+    float amplitude = 1.0f;
+    float frequency = 1.0f;
+    float maxValue = 0.0f;
+
+    for (int i = 0; i < octaves; i++)
+    {
+        value += smoothNoise(x * frequency, z * frequency) * amplitude;
+        maxValue += amplitude;
+        amplitude *= 0.5f;
+        frequency *= 2.0f;
+    }
+
+    return value / maxValue; // normalized to [-1, 1]
+}
 
 VoxelWorld::VoxelWorld()
     : voxels(SIZE * SIZE * SIZE, AIR)
@@ -17,7 +65,6 @@ VoxelWorld::~VoxelWorld()
 
 void VoxelWorld::generateTerrain()
 {
-    // Sine-wave heightmap — scaled for 256³ grid
     for (int x = 0; x < SIZE; x++)
     {
         for (int z = 0; z < SIZE; z++)
@@ -25,30 +72,43 @@ void VoxelWorld::generateTerrain()
             float fx = static_cast<float>(x) / SIZE;
             float fz = static_cast<float>(z) / SIZE;
 
-            float height = 64.0f
-                + 24.0f * std::sin(fx * 6.28f * 2.0f)
-                + 16.0f * std::sin(fz * 6.28f * 3.0f)
-                + 12.0f * std::sin((fx + fz) * 6.28f * 1.5f);
+            // Continental: large rolling terrain features
+            float continental = fbm(fx * 3.0f, fz * 3.0f, 6);
 
-            int h = static_cast<int>(height);
-            if (h < 1) h = 1;
-            if (h >= SIZE) h = SIZE - 1;
+            // Detail: small bumps and texture
+            float detail = fbm(fx * 12.0f + 100.0f, fz * 12.0f + 100.0f, 4);
+
+            // Ridged: sharp peaks at noise zero-crossings
+            float ridgeBase = fbm(fx * 5.0f + 200.0f, fz * 5.0f + 200.0f, 5);
+            float ridged = 1.0f - std::abs(ridgeBase);
+            ridged = ridged * ridged; // sharpen ridges
+
+            float height = 60.0f + continental * 32.0f + detail * 8.0f + ridged * 18.0f;
+
+            int h = std::max(1, std::min(static_cast<int>(height), SIZE - 1));
 
             for (int y = 0; y < h; y++)
             {
-                if (y == h - 1)
+                if (y == h - 1 && h > WATER_LEVEL)
                     at(x, y, z) = GRASS;
-                else if (y >= h - 16)
+                else if (y >= h - 4)
                     at(x, y, z) = DIRT;
                 else
                     at(x, y, z) = STONE;
             }
+
+            // Fill water in low areas
+            if (h < WATER_LEVEL)
+            {
+                for (int y = h; y < WATER_LEVEL; y++)
+                    at(x, y, z) = WATER;
+            }
         }
     }
 
-    // Scatter trees
+    // Scatter more trees (80 instead of 30)
     std::srand(42);
-    for (int i = 0; i < 30; i++)
+    for (int i = 0; i < 80; i++)
     {
         int tx = std::rand() % (SIZE - 24) + 12;
         int tz = std::rand() % (SIZE - 24) + 12;
@@ -58,18 +118,20 @@ void VoxelWorld::generateTerrain()
 
 void VoxelWorld::placeTree(int tx, int tz)
 {
-    // Find ground height
+    // Find ground height (skip air and water)
     int ground = 0;
     for (int y = SIZE - 1; y >= 0; y--)
     {
-        if (at(tx, y, tz) != AIR)
+        uint8_t block = at(tx, y, tz);
+        if (block != AIR && block != WATER)
         {
             ground = y + 1;
             break;
         }
     }
 
-    if (ground <= 0 || ground + 28 >= SIZE) return;
+    // Only place on land well above water, with room for full tree
+    if (ground <= WATER_LEVEL + 2 || ground + 44 >= SIZE) return;
 
     int trunkHeight = 16 + (std::rand() % 12);
 

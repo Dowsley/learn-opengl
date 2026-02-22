@@ -16,6 +16,9 @@ public:
     static constexpr uint8_t STONE = 3;
     static constexpr uint8_t WOOD  = 4;
     static constexpr uint8_t LEAF  = 5;
+    static constexpr uint8_t WATER = 6;
+
+    static constexpr int WATER_LEVEL = 58;
 
     VoxelWorld();
     ~VoxelWorld();

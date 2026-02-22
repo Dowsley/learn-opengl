@@ -5,6 +5,7 @@
 
 VoxelRenderer::VoxelRenderer()
     : shader("shaders/voxelVertex.glsl", "shaders/voxelFragment.glsl")
+    , postShader("shaders/postVertex.glsl", "shaders/postFragment.glsl")
 {
     setupQuad();
 }
@@ -15,6 +16,11 @@ VoxelRenderer::~VoxelRenderer()
     if (quadVBO) glDeleteBuffers(1, &quadVBO);
     if (fbo) glDeleteFramebuffers(1, &fbo);
     if (fboColor) glDeleteTextures(1, &fboColor);
+    for (int i = 0; i < 2; i++)
+    {
+        if (bloomFBO[i]) glDeleteFramebuffers(1, &bloomFBO[i]);
+        if (bloomColor[i]) glDeleteTextures(1, &bloomColor[i]);
+    }
 }
 
 void VoxelRenderer::setupQuad()
@@ -51,9 +57,11 @@ void VoxelRenderer::setupFBO(int width, int height)
 
     glGenTextures(1, &fboColor);
     glBindTexture(GL_TEXTURE_2D, fboColor);
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB8, fboWidth, fboHeight, 0, GL_RGB, GL_UNSIGNED_BYTE, nullptr);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB16F, fboWidth, fboHeight, 0, GL_RGB, GL_FLOAT, nullptr);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
     glBindTexture(GL_TEXTURE_2D, 0);
 
     glGenFramebuffers(1, &fbo);
@@ -62,15 +70,47 @@ void VoxelRenderer::setupFBO(int width, int height)
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
 }
 
+void VoxelRenderer::setupBloomFBOs(int width, int height)
+{
+    for (int i = 0; i < 2; i++)
+    {
+        if (bloomFBO[i]) glDeleteFramebuffers(1, &bloomFBO[i]);
+        if (bloomColor[i]) glDeleteTextures(1, &bloomColor[i]);
+
+        glGenTextures(1, &bloomColor[i]);
+        glBindTexture(GL_TEXTURE_2D, bloomColor[i]);
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB16F, width, height, 0, GL_RGB, GL_FLOAT, nullptr);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+
+        glGenFramebuffers(1, &bloomFBO[i]);
+        glBindFramebuffer(GL_FRAMEBUFFER, bloomFBO[i]);
+        glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, bloomColor[i], 0);
+    }
+
+    bloomWidth = width;
+    bloomHeight = height;
+    glBindFramebuffer(GL_FRAMEBUFFER, 0);
+    glBindTexture(GL_TEXTURE_2D, 0);
+}
+
 void VoxelRenderer::render(const Camera& cam, int fbWidth, int fbHeight, const VoxelWorld& world)
 {
-    // Ensure half-res FBO matches current window size
+    // Ensure half-res HDR FBO matches current window size
     int halfW = fbWidth / 2;
     int halfH = fbHeight / 2;
     if (halfW != fboWidth || halfH != fboHeight)
         setupFBO(halfW, halfH);
 
-    // --- Pass 1: Raymarch at half resolution ---
+    // Ensure quarter-res bloom FBOs match
+    int qW = halfW / 2;
+    int qH = halfH / 2;
+    if (qW != bloomWidth || qH != bloomHeight)
+        setupBloomFBOs(qW, qH);
+
+    // === Pass 1: Raymarch scene at half resolution into HDR FBO ===
     glBindFramebuffer(GL_FRAMEBUFFER, fbo);
     glViewport(0, 0, fboWidth, fboHeight);
 
@@ -95,13 +135,57 @@ void VoxelRenderer::render(const Camera& cam, int fbWidth, int fbHeight, const V
 
     glBindVertexArray(quadVAO);
     glDrawArrays(GL_TRIANGLES, 0, 6);
-    glBindVertexArray(0);
 
-    // --- Pass 2: Blit half-res to full screen with bilinear upscale ---
-    glBindFramebuffer(GL_READ_FRAMEBUFFER, fbo);
-    glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0);
-    glBlitFramebuffer(0, 0, fboWidth, fboHeight, 0, 0, fbWidth, fbHeight,
-                      GL_COLOR_BUFFER_BIT, GL_LINEAR);
+    // === Post-processing pipeline ===
+    postShader.use();
+    postShader.setInt("sceneTex", 0);
+    postShader.setInt("bloomTex", 1);
+
+    // Bind a valid texture to unit 1 to suppress macOS driver warning
+    glActiveTexture(GL_TEXTURE1);
+    glBindTexture(GL_TEXTURE_2D, bloomColor[0]);
+    glActiveTexture(GL_TEXTURE0);
+
+    // --- Pass 2: Bright extraction -> bloomFBO[0] at quarter res ---
+    glBindFramebuffer(GL_FRAMEBUFFER, bloomFBO[0]);
+    glViewport(0, 0, bloomWidth, bloomHeight);
+    postShader.setInt("passMode", 0);
+
+    glActiveTexture(GL_TEXTURE0);
+    glBindTexture(GL_TEXTURE_2D, fboColor);
+
+    glDrawArrays(GL_TRIANGLES, 0, 6);
+
+    // --- Pass 3: Horizontal blur bloomFBO[0] -> bloomFBO[1] ---
+    glBindFramebuffer(GL_FRAMEBUFFER, bloomFBO[1]);
+    postShader.setInt("passMode", 1);
+    postShader.setVec3("texelSize", glm::vec3(1.0f / bloomWidth, 1.0f / bloomHeight, 0.0f));
+
+    glActiveTexture(GL_TEXTURE0);
+    glBindTexture(GL_TEXTURE_2D, bloomColor[0]);
+
+    glDrawArrays(GL_TRIANGLES, 0, 6);
+
+    // --- Pass 4: Vertical blur bloomFBO[1] -> bloomFBO[0] ---
+    glBindFramebuffer(GL_FRAMEBUFFER, bloomFBO[0]);
+    postShader.setInt("passMode", 2);
+
+    glActiveTexture(GL_TEXTURE0);
+    glBindTexture(GL_TEXTURE_2D, bloomColor[1]);
+
+    glDrawArrays(GL_TRIANGLES, 0, 6);
+
+    // --- Pass 5: Final composite -> screen ---
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
     glViewport(0, 0, fbWidth, fbHeight);
+    postShader.setInt("passMode", 3);
+
+    glActiveTexture(GL_TEXTURE0);
+    glBindTexture(GL_TEXTURE_2D, fboColor);
+    glActiveTexture(GL_TEXTURE1);
+    glBindTexture(GL_TEXTURE_2D, bloomColor[0]);
+
+    glDrawArrays(GL_TRIANGLES, 0, 6);
+
+    glBindVertexArray(0);
 }
