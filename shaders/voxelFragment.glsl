@@ -331,9 +331,11 @@ void main()
     } else if (mask.y == 1) {
         float faceY = float(mapPos.y) + (step.y < 0 ? 1.0 : 0.0);
         tHit = (faceY - ro.y) / rd.y;
-    } else {
+    } else if (mask.z == 1) {
         float faceZ = float(mapPos.z) + (step.z < 0 ? 1.0 : 0.0);
         tHit = (faceZ - ro.z) / rd.z;
+    } else {
+        tHit = max(tMin, 0.0); // first voxel at AABB entry
     }
     vec3 hitPos = ro + rd * tHit;
     vec3 localPos = hitPos - vec3(mapPos);
@@ -384,13 +386,13 @@ void main()
     // ==========================================================
     // Phase 3: Soft shadows (fixed-pattern multi-sample)
     // ==========================================================
-    float dist = length(vec3(mapPos) - ro);
+    float dist = length(hitPos - ro);
     float shadowFactor = 1.0;
     float NdotL = max(dot(normal, sunDir), 0.0);
 
     if (NdotL > 0.0 && dist < worldSize * 0.75)
     {
-        vec3 shadowOrigin = vec3(mapPos) + 0.5 + normal * 0.51;
+        vec3 shadowOrigin = hitPos + normal * 0.01;
 
         // Build tangent frame around sun direction
         vec3 sunTangent = normalize(cross(sunDir, abs(sunDir.y) < 0.9 ? vec3(0,1,0) : vec3(1,0,0)));
@@ -432,7 +434,7 @@ void main()
     // ==========================================================
     // Phase 7: PBR lighting (GGX specular + diffuse)
     // ==========================================================
-    vec3 viewDir = normalize(ro - (vec3(mapPos) + 0.5));
+    vec3 viewDir = normalize(ro - hitPos);
     vec3 halfVec = normalize(sunDir + viewDir);
     float NdotV = max(dot(normal, viewDir), 0.001);
     float NdotH = max(dot(normal, halfVec), 0.0);
