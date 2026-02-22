@@ -45,22 +45,23 @@ int sampleVoxel(ivec3 pos)
     return int(val * 255.0 + 0.5);
 }
 
-// DDA ray cast helper — returns true if ray hits a solid voxel within maxSteps
+// DDA ray cast helper — returns true if ray hits a solid voxel within maxSteps.
+// Inlines texelFetch directly to avoid redundant bounds checks.
 bool castRay(vec3 origin, vec3 dir, int maxSteps)
 {
-    vec3 pos = origin;
-    ivec3 mapPos = ivec3(floor(pos));
+    ivec3 mapPos = ivec3(floor(origin));
     vec3 deltaDist = abs(vec3(1.0) / dir);
     ivec3 stepDir = ivec3(sign(dir));
-    vec3 sideDist = (sign(dir) * (vec3(mapPos) - pos) + sign(dir) * 0.5 + 0.5) * deltaDist;
+    vec3 sideDist = (sign(dir) * (vec3(mapPos) - origin) + sign(dir) * 0.5 + 0.5) * deltaDist;
+    int iWorldSize = int(worldSize);
 
     for (int i = 0; i < maxSteps; i++)
     {
         if (mapPos.x < 0 || mapPos.y < 0 || mapPos.z < 0 ||
-            mapPos.x >= int(worldSize) || mapPos.y >= int(worldSize) || mapPos.z >= int(worldSize))
+            mapPos.x >= iWorldSize || mapPos.y >= iWorldSize || mapPos.z >= iWorldSize)
             return false;
 
-        if (sampleVoxel(mapPos) != 0)
+        if (texelFetch(voxelTex, mapPos, 0).r > 0.0)
             return true;
 
         if (sideDist.x < sideDist.y)
@@ -137,7 +138,8 @@ void main()
     // Track which face was hit for normal calculation
     ivec3 mask = ivec3(0);
 
-    int maxSteps = int(worldSize) * 3;
+    int iWorldSize = int(worldSize);
+    int maxSteps = iWorldSize * 3;
     int blockType = 0;
 
     for (int i = 0; i < maxSteps; i++)
@@ -183,7 +185,7 @@ void main()
 
         // Check if we left the grid
         if (mapPos.x < 0 || mapPos.y < 0 || mapPos.z < 0 ||
-            mapPos.x >= int(worldSize) || mapPos.y >= int(worldSize) || mapPos.z >= int(worldSize))
+            mapPos.x >= iWorldSize || mapPos.y >= iWorldSize || mapPos.z >= iWorldSize)
             break;
     }
 
@@ -197,13 +199,14 @@ void main()
     vec3 normal = -vec3(mask) * vec3(step);
 
     // --- 1. Sun shadow ray ---
+    float dist = length(vec3(mapPos) - ro);
     float shadowFactor = 1.0;
     float diffuse = max(dot(normal, sunDir), 0.0);
-    if (diffuse > 0.0)
+    // Skip shadow rays for distant pixels — fog hides them anyway
+    if (diffuse > 0.0 && dist < worldSize * 0.75)
     {
-        // Start shadow ray from the hit face, offset slightly into air
         vec3 shadowOrigin = vec3(mapPos) + 0.5 + normal * 0.51;
-        if (castRay(shadowOrigin, sunDir, 64))
+        if (castRay(shadowOrigin, sunDir, 48))
             shadowFactor = 0.0;
     }
 
@@ -241,8 +244,7 @@ void main()
     // --- 4. Combine lighting ---
     vec3 color = getBlockColor(blockType) * (hemiAmbient * aoFactor + diffuse * shadowFactor * 0.75);
 
-    // Slight fog based on distance
-    float dist = length(vec3(mapPos) - ro);
+    // Slight fog based on distance (dist computed above for shadow cutoff)
     float fogFactor = clamp(dist / (worldSize * 2.0), 0.0, 1.0);
     fogFactor = fogFactor * fogFactor; // quadratic falloff
     color = mix(color, skyColor, fogFactor);
