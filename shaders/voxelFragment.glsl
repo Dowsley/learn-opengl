@@ -135,8 +135,10 @@ int sampleVoxel(ivec3 pos)
     return int(val * 255.0 + 0.5);
 }
 
-// DDA ray cast — returns true if ray hits a solid voxel within maxSteps.
-bool castRay(vec3 origin, vec3 dir, int maxSteps)
+// Soft shadow via SDF-inspired closest-miss DDA (Quilez technique).
+// Returns continuous 0.0 (full shadow) to 1.0 (fully lit).
+// k controls penumbra sharpness (higher = harder shadows).
+float castSoftShadow(vec3 origin, vec3 dir, int maxSteps, float k)
 {
     ivec3 mapPos = ivec3(floor(origin));
     vec3 deltaDist = abs(vec3(1.0) / dir);
@@ -144,15 +146,54 @@ bool castRay(vec3 origin, vec3 dir, int maxSteps)
     vec3 sideDist = (sign(dir) * (vec3(mapPos) - origin) + sign(dir) * 0.5 + 0.5) * deltaDist;
     int iWorldSize = int(worldSize);
 
+    float res = 1.0;
+
     for (int i = 0; i < maxSteps; i++)
     {
         if (mapPos.x < 0 || mapPos.y < 0 || mapPos.z < 0 ||
             mapPos.x >= iWorldSize || mapPos.y >= iWorldSize || mapPos.z >= iWorldSize)
-            return false;
+            break;
 
         if (texelFetch(voxelTex, mapPos, 0).r > 0.0)
-            return true;
+            return 0.0; // direct hit = full shadow
 
+        // Travel distance so far (minimum of sideDist components gives next boundary,
+        // subtract deltaDist to get the entry distance of the current voxel)
+        float t = max(min(min(sideDist.x - deltaDist.x, sideDist.y - deltaDist.y),
+                         sideDist.z - deltaDist.z), 0.1);
+
+        // Ray position at current step
+        vec3 rayPos = origin + dir * t;
+
+        // Check 6 face neighbors for solid voxels
+        ivec3 offsets[6] = ivec3[6](
+            ivec3(1, 0, 0), ivec3(-1, 0, 0),
+            ivec3(0, 1, 0), ivec3(0, -1, 0),
+            ivec3(0, 0, 1), ivec3(0, 0, -1)
+        );
+
+        for (int n = 0; n < 6; n++)
+        {
+            ivec3 neighbor = mapPos + offsets[n];
+            if (neighbor.x < 0 || neighbor.y < 0 || neighbor.z < 0 ||
+                neighbor.x >= iWorldSize || neighbor.y >= iWorldSize || neighbor.z >= iWorldSize)
+                continue;
+
+            if (texelFetch(voxelTex, neighbor, 0).r > 0.0)
+            {
+                // Box SDF: distance from ray position to unit cube centered at neighbor
+                vec3 neighborCenter = vec3(neighbor) + 0.5;
+                vec3 d = abs(rayPos - neighborCenter) - vec3(0.5);
+                float boxDist = length(max(d, 0.0));
+
+                res = min(res, k * boxDist / t);
+            }
+        }
+
+        // Early out if already very dark
+        if (res < 0.01) return 0.0;
+
+        // DDA step
         if (sideDist.x < sideDist.y)
         {
             if (sideDist.x < sideDist.z)
@@ -181,7 +222,7 @@ bool castRay(vec3 origin, vec3 dir, int maxSteps)
         }
     }
 
-    return false;
+    return clamp(res, 0.0, 1.0);
 }
 
 // ============================================================
@@ -384,7 +425,7 @@ void main()
     float aoFactor = mix(mix(ao00, ao10, faceUV.x), mix(ao01, ao11, faceUV.x), faceUV.y);
 
     // ==========================================================
-    // Phase 3: Soft shadows (fixed-pattern multi-sample)
+    // Phase 3: Smooth soft shadows (SDF-inspired closest-miss DDA)
     // ==========================================================
     float dist = length(hitPos - ro);
     float shadowFactor = 1.0;
@@ -393,31 +434,7 @@ void main()
     if (NdotL > 0.0 && dist < worldSize * 0.75)
     {
         vec3 shadowOrigin = hitPos + normal * 0.01;
-
-        // Build tangent frame around sun direction
-        vec3 sunTangent = normalize(cross(sunDir, abs(sunDir.y) < 0.9 ? vec3(0,1,0) : vec3(1,0,0)));
-        vec3 sunBitangent = cross(sunDir, sunTangent);
-
-        // 3 fixed directions: center + 2 opposing offsets at 120-degree spacing
-        // No per-pixel randomness = spatially coherent shadow edges
-        float sunRadius = 0.035;
-        int shadowHits = 0;
-
-        // Center ray
-        if (castRay(shadowOrigin, sunDir, 48))
-            shadowHits++;
-
-        // Two offset rays (opposing, perpendicular to each other)
-        vec3 sDir1 = normalize(sunDir + sunTangent * sunRadius * 0.866 + sunBitangent * sunRadius * 0.5);
-        vec3 sDir2 = normalize(sunDir - sunTangent * sunRadius * 0.866 - sunBitangent * sunRadius * 0.5);
-
-        if (castRay(shadowOrigin, sDir1, 48))
-            shadowHits++;
-        if (castRay(shadowOrigin, sDir2, 48))
-            shadowHits++;
-
-        shadowFactor = 1.0 - float(shadowHits) / 3.0;
-        shadowFactor = smoothstep(0.0, 1.0, shadowFactor);
+        shadowFactor = castSoftShadow(shadowOrigin, sunDir, 64, 12.0);
     }
 
     // ==========================================================
