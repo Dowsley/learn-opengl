@@ -69,6 +69,10 @@ void main()
         return;
     }
 
+    // Clamp max traversal distance
+    float maxDist = worldSize * 1.5;
+    tMax = min(tMax, max(tMin, 0.0) + maxDist);
+
     // Advance ray to AABB entry (or start at camera if inside)
     float t = max(tMin, 0.0) + 0.001;
     vec3 pos = ro + rd * t;
@@ -84,7 +88,7 @@ void main()
     // Track which face was hit for normal calculation
     ivec3 mask = ivec3(0);
 
-    int maxSteps = int(worldSize) * 3; // ~192 for 64^3
+    int maxSteps = int(worldSize) * 3;
     int blockType = 0;
 
     for (int i = 0; i < maxSteps; i++)
@@ -97,12 +101,14 @@ void main()
         {
             if (sideDist.x < sideDist.z)
             {
+                if (sideDist.x > maxDist) break;
                 sideDist.x += deltaDist.x;
                 mapPos.x += step.x;
                 mask = ivec3(1, 0, 0);
             }
             else
             {
+                if (sideDist.z > maxDist) break;
                 sideDist.z += deltaDist.z;
                 mapPos.z += step.z;
                 mask = ivec3(0, 0, 1);
@@ -112,12 +118,14 @@ void main()
         {
             if (sideDist.y < sideDist.z)
             {
+                if (sideDist.y > maxDist) break;
                 sideDist.y += deltaDist.y;
                 mapPos.y += step.y;
                 mask = ivec3(0, 1, 0);
             }
             else
             {
+                if (sideDist.z > maxDist) break;
                 sideDist.z += deltaDist.z;
                 mapPos.z += step.z;
                 mask = ivec3(0, 0, 1);

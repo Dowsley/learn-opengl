@@ -18,5 +18,12 @@ private:
     GLuint quadVBO = 0;
     Shader shader;
 
+    // Half-res FBO for raymarching
+    GLuint fbo = 0;
+    GLuint fboColor = 0;
+    int fboWidth = 0;
+    int fboHeight = 0;
+
     void setupQuad();
+    void setupFBO(int width, int height);
 };
