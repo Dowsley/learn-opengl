@@ -1,12 +1,13 @@
 #pragma once
 
 #include <cstdint>
+#include <vector>
 #include <glad/glad.h>
 
 class VoxelWorld
 {
 public:
-    static constexpr int SIZE = 64;
+    static constexpr int SIZE = 256;
 
     // Block types
     static constexpr uint8_t AIR   = 0;
@@ -23,7 +24,7 @@ public:
     GLuint getTexture() const { return texture; }
 
 private:
-    uint8_t voxels[SIZE * SIZE * SIZE]{};
+    std::vector<uint8_t> voxels;
     GLuint texture = 0;
 
     void generateTerrain();

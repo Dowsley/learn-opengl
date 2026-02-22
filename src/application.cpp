@@ -75,9 +75,10 @@ void Application::startup()
     voxelWorld = std::make_unique<VoxelWorld>();
     voxelRenderer = std::make_unique<VoxelRenderer>();
 
-    cam.pos = glm::vec3(32.0f, 40.0f, -10.0f);
+    cam.pos = glm::vec3(128.0f, 160.0f, -40.0f);
     cam.pitch = -25.0f;
     cam.yaw = 90.0f;
+    cam.speed = 26.0f;
     cam.processMouseMovement(0.0f, 0.0f); // update front vector
 
     /* 5. Prepare for main loop */

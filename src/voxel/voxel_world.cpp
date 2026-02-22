@@ -1,11 +1,10 @@
 #include "voxel_world.h"
 #include <cmath>
 #include <cstdlib>
-#include <cstring>
 
 VoxelWorld::VoxelWorld()
+    : voxels(SIZE * SIZE * SIZE, AIR)
 {
-    std::memset(voxels, AIR, sizeof(voxels));
     generateTerrain();
     uploadToGPU();
 }
@@ -18,7 +17,7 @@ VoxelWorld::~VoxelWorld()
 
 void VoxelWorld::generateTerrain()
 {
-    // Sine-wave heightmap
+    // Sine-wave heightmap — scaled for 256³ grid
     for (int x = 0; x < SIZE; x++)
     {
         for (int z = 0; z < SIZE; z++)
@@ -26,10 +25,10 @@ void VoxelWorld::generateTerrain()
             float fx = static_cast<float>(x) / SIZE;
             float fz = static_cast<float>(z) / SIZE;
 
-            float height = 16.0f
-                + 6.0f * std::sin(fx * 6.28f * 2.0f)
-                + 4.0f * std::sin(fz * 6.28f * 3.0f)
-                + 3.0f * std::sin((fx + fz) * 6.28f * 1.5f);
+            float height = 64.0f
+                + 24.0f * std::sin(fx * 6.28f * 2.0f)
+                + 16.0f * std::sin(fz * 6.28f * 3.0f)
+                + 12.0f * std::sin((fx + fz) * 6.28f * 1.5f);
 
             int h = static_cast<int>(height);
             if (h < 1) h = 1;
@@ -39,7 +38,7 @@ void VoxelWorld::generateTerrain()
             {
                 if (y == h - 1)
                     at(x, y, z) = GRASS;
-                else if (y >= h - 4)
+                else if (y >= h - 16)
                     at(x, y, z) = DIRT;
                 else
                     at(x, y, z) = STONE;
@@ -47,12 +46,12 @@ void VoxelWorld::generateTerrain()
         }
     }
 
-    // Scatter trees using a simple deterministic pattern
+    // Scatter trees
     std::srand(42);
     for (int i = 0; i < 30; i++)
     {
-        int tx = std::rand() % (SIZE - 6) + 3;
-        int tz = std::rand() % (SIZE - 6) + 3;
+        int tx = std::rand() % (SIZE - 24) + 12;
+        int tz = std::rand() % (SIZE - 24) + 12;
         placeTree(tx, tz);
     }
 }
@@ -70,19 +69,19 @@ void VoxelWorld::placeTree(int tx, int tz)
         }
     }
 
-    if (ground <= 0 || ground + 7 >= SIZE) return;
+    if (ground <= 0 || ground + 28 >= SIZE) return;
 
-    int trunkHeight = 4 + (std::rand() % 3);
+    int trunkHeight = 16 + (std::rand() % 12);
 
     // Trunk
     for (int y = ground; y < ground + trunkHeight; y++)
         at(tx, y, tz) = WOOD;
 
     // Leaves (canopy)
-    int leafBase = ground + trunkHeight - 1;
-    for (int dy = 0; dy < 4; dy++)
+    int leafBase = ground + trunkHeight - 4;
+    for (int dy = 0; dy < 16; dy++)
     {
-        int radius = (dy < 3) ? 2 : 1;
+        int radius = (dy < 12) ? 8 : 4;
         for (int dx = -radius; dx <= radius; dx++)
         {
             for (int dz = -radius; dz <= radius; dz++)
@@ -92,8 +91,9 @@ void VoxelWorld::placeTree(int tx, int tz)
                     continue;
                 if (dx == 0 && dz == 0 && dy < trunkHeight)
                     continue; // trunk occupies this
-                if (std::abs(dx) == radius && std::abs(dz) == radius && dy < 2)
-                    continue; // round off corners on lower layers
+                // Spherical-ish shape: skip corners beyond radius
+                if (dx * dx + dz * dz > radius * radius)
+                    continue;
                 if (at(lx, ly, lz) == AIR)
                     at(lx, ly, lz) = LEAF;
             }
@@ -116,7 +116,7 @@ void VoxelWorld::uploadToGPU()
     glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
 
     glTexImage3D(GL_TEXTURE_3D, 0, GL_R8, SIZE, SIZE, SIZE, 0,
-                 GL_RED, GL_UNSIGNED_BYTE, voxels);
+                 GL_RED, GL_UNSIGNED_BYTE, voxels.data());
 
     glBindTexture(GL_TEXTURE_3D, 0);
 }
