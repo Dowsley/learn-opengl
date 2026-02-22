@@ -1,5 +1,6 @@
 #pragma once
 
+#include <memory>
 #include <optional>
 #include <glad/glad.h>
 #include <GLFW/glfw3.h>
@@ -8,6 +9,8 @@
 #include "render/model.h"
 #include "render/shader.h"
 #include "systems/input_system.h"
+#include "voxel/voxel_world.h"
+#include "voxel/voxel_renderer.h"
 
 constexpr unsigned int SCALE = 2;
 constexpr unsigned int WINDOW_WIDTH = 800 * SCALE;
@@ -28,6 +31,8 @@ private:
     std::optional<Shader> lightSourceShader;
 
     Camera cam;
+    std::unique_ptr<VoxelWorld> voxelWorld;
+    std::unique_ptr<VoxelRenderer> voxelRenderer;
     std::optional<Model> backpack;
     std::optional<Model> container;
     std::optional<Model> cube;

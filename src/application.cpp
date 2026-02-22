@@ -71,7 +71,16 @@ void Application::startup()
     lightSourceShader.emplace("shaders/vertexShaderDefault.glsl", "shaders/fragmentShaderLightSource.glsl");
     defaultShader.emplace("shaders/vertexShaderDefault.glsl", "shaders/fragmentShaderPhong.glsl");
 
-    /* 4. Prepare for main loop */
+    /* 4. Voxel system */
+    voxelWorld = std::make_unique<VoxelWorld>();
+    voxelRenderer = std::make_unique<VoxelRenderer>();
+
+    cam.pos = glm::vec3(32.0f, 40.0f, -10.0f);
+    cam.pitch = -25.0f;
+    cam.yaw = 90.0f;
+    cam.processMouseMovement(0.0f, 0.0f); // update front vector
+
+    /* 5. Prepare for main loop */
     glEnable(GL_DEPTH_TEST);
     glEnable(GL_BLEND);
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
@@ -85,95 +94,23 @@ void Application::process()
     deltaTime = currentFrame - lastFrame;
     lastFrame = currentFrame;
 
+    glfwPollEvents();
     processInput();
 
     /* Drawing/Rendering */
-    // glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
     glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-    if (wireframeMode) {
-        glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
-    } else {
-        glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
-    }
-
-    // 1. cube
-    auto viewMatrix = cam.getViewMatrix();
-    auto projectionMatrix = glm::perspective(
-        glm::radians(cam.fov), (float)fbWidth/(float)fbHeight, 0.1f, 100.0f);
-
-    defaultShader->use();
-    defaultShader->setMat4("viewMatrix", viewMatrix, 1, GL_FALSE);
-    defaultShader->setMat4("projectionMatrix", projectionMatrix, 1, GL_FALSE);
-    defaultShader->setVec3("viewPos", cam.pos);
-    defaultShader->setFloat("shininess", 32.0f);
-
-    defaultShader->setVec3("dirLight.direction", { 0.0f, -1.0f, 0.0f });
-    defaultShader->setVec3("dirLight.ambientColor", WHITE * glm::vec3(.1f));
-    defaultShader->setVec3("dirLight.diffuseColor", WHITE * glm::vec3(1.0f));
-    defaultShader->setVec3("dirLight.specularColor", WHITE * glm::vec3(1.0f));
-
-    glm::vec3 pointLightColor = boringWhiteMode
-        ? WHITE
-        : glm::vec3{ sin(currentFrame * 2.0f), sin(currentFrame * 0.7f), sin(currentFrame * 1.3f) };
-    defaultShader->setVec3("pointLights[0].position", pointLightPos);
-    defaultShader->setVec3("pointLights[0].ambientColor", pointLightColor * glm::vec3(0.02f));
-    defaultShader->setVec3("pointLights[0].diffuseColor", pointLightColor * glm::vec3(0.6f));
-    defaultShader->setVec3("pointLights[0].specularColor", glm::vec3(1.0f, 1.0f, 1.0f));
-    defaultShader->setFloat("pointLights[0].constantAttTerm", 1.0f);
-    defaultShader->setFloat("pointLights[0].linearAttTerm", 0.09f);
-    defaultShader->setFloat("pointLights[0].quadraticAttTerm", 0.032f);
-
-    // spotlight (flashlight attached to camera)
-    defaultShader->setVec3("spotLight.position", cam.pos);
-    defaultShader->setVec3("spotLight.direction", cam.front);
-    defaultShader->setFloat("spotLight.cutOff", glm::cos(glm::radians(12.5f)));
-    defaultShader->setFloat("spotLight.outerCutOff", glm::cos(glm::radians(17.5f)));
-    defaultShader->setVec3("spotLight.ambientColor", BLACK);
-    defaultShader->setVec3("spotLight.diffuseColor", flashlightOn ? WHITE : BLACK);
-    defaultShader->setVec3("spotLight.specularColor", flashlightOn ? WHITE : BLACK);
-    defaultShader->setFloat("spotLight.constantAttTerm", 1.0f);
-    defaultShader->setFloat("spotLight.linearAttTerm", 0.027f);
-    defaultShader->setFloat("spotLight.quadraticAttTerm", 0.0028f);
-
-    auto modelMatrix = glm::mat4(1.0f);
-    defaultShader->setMat4("modelMatrix", modelMatrix, 1, GL_FALSE);
-    backpack->draw(*defaultShader);
-
-    modelMatrix = glm::translate(glm::mat4(1.0f), glm::vec3(5.0f, 0.0f, 0.0f));
-    defaultShader->setMat4("modelMatrix", modelMatrix, 1, GL_FALSE);
-    container->draw(*defaultShader);
-
-    for (unsigned int i = 0; i < grassPositions.size(); i++)
-    {
-        modelMatrix = glm::translate(glm::mat4(1.0f), glm::vec3(-5.0f, 0.0f, -1.0f));
-        modelMatrix = glm::rotate(modelMatrix, glm::radians(180.0f), glm::vec3(1.0f, 0.0f, 0.0f));
-        defaultShader->setMat4("modelMatrix", modelMatrix, 1, GL_FALSE);
-        grass->draw(*defaultShader);
-    }
-
-    modelMatrix = glm::translate(glm::mat4(1.0f), glm::vec3(0.0f, 0.0f, 2.0f));
-    defaultShader->setMat4("modelMatrix", modelMatrix, 1, GL_FALSE);
-    transparentWindow->draw(*defaultShader);
-
-    // 3. light sources
-    lightSourceShader->use();
-    lightSourceShader->setMat4("viewMatrix", viewMatrix, 1, GL_FALSE);
-    lightSourceShader->setMat4("projectionMatrix", projectionMatrix, 1, GL_FALSE);
-
-    modelMatrix = glm::translate(glm::mat4(1.0f), pointLightPos);
-    modelMatrix = glm::scale(modelMatrix, glm::vec3(0.2f));
-    lightSourceShader->setVec3("color", pointLightColor);
-    lightSourceShader->setMat4("modelMatrix", modelMatrix, 1, GL_FALSE);
-    cube->draw(*lightSourceShader);
+    glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+    voxelRenderer->render(cam, fbWidth, fbHeight, *voxelWorld);
 
     glfwSwapBuffers(window);
-    glfwPollEvents();
 }
 
 void Application::cleanup()
 {
+    voxelRenderer.reset();
+    voxelWorld.reset();
     defaultShader.reset();
     lightSourceShader.reset();
     glfwTerminate();
