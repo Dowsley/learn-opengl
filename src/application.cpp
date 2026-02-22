@@ -1,9 +1,6 @@
 #include <iostream>
-#include <vector>
 
 #include <glad/glad.h>
-#include <glm/gtc/matrix_transform.hpp>
-#include <glm/gtc/type_ptr.hpp>
 #include "application.h"
 
 void Application::run()
@@ -44,10 +41,6 @@ void Application::startup()
     input->createAction("move_up", {GLFW_KEY_SPACE});
     input->createAction("move_down", {GLFW_KEY_LEFT_SHIFT});
     input->createAction("quit", {GLFW_KEY_ESCAPE});
-    input->createAction("toggle_wireframe", {GLFW_KEY_LEFT_ALT});
-    input->createAction("toggle_light_mode", {GLFW_KEY_Q});
-    input->createAction("toggle_light_placement", {GLFW_KEY_E});
-    input->createAction("toggle_flashlight", {GLFW_KEY_F});
 
     /* 2. GLAD: Initializing pointers */
     if (!gladLoadGLLoader((GLADloadproc)glfwGetProcAddress))
@@ -60,18 +53,7 @@ void Application::startup()
     glGetIntegerv(GL_MAX_VERTEX_ATTRIBS, &nAttributes);
     std::cout << "Maximum number of attributes: " << nAttributes << std::endl;
 
-    /* 3. OpenGL: Initializing shaders and objects */
-    backpack.emplace("assets/models/backpack/backpack.obj");
-    container.emplace("assets/models/container/container.obj");
-    cube.emplace("assets/models/cube/cube.obj");
-    grass.emplace("assets/models/grass/grass.obj", GL_CLAMP_TO_EDGE);
-    transparentWindow.emplace("assets/models/window/window.obj", GL_CLAMP_TO_EDGE);
-
-    /* 3.2 Shader setup */
-    lightSourceShader.emplace("shaders/vertexShaderDefault.glsl", "shaders/fragmentShaderLightSource.glsl");
-    defaultShader.emplace("shaders/vertexShaderDefault.glsl", "shaders/fragmentShaderPhong.glsl");
-
-    /* 4. Voxel system */
+    /* 3. Voxel system */
     voxelWorld = std::make_unique<VoxelWorld>();
     voxelRenderer = std::make_unique<VoxelRenderer>();
 
@@ -81,7 +63,7 @@ void Application::startup()
     cam.speed = 26.0f;
     cam.processMouseMovement(0.0f, 0.0f); // update front vector
 
-    /* 5. Prepare for main loop */
+    /* 4. Prepare for main loop */
     glEnable(GL_DEPTH_TEST);
     glEnable(GL_BLEND);
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
@@ -112,8 +94,6 @@ void Application::cleanup()
 {
     voxelRenderer.reset();
     voxelWorld.reset();
-    defaultShader.reset();
-    lightSourceShader.reset();
     glfwTerminate();
 }
 
@@ -123,9 +103,6 @@ void Application::processInput()
 
     if (input->isActionJustPressed("quit"))
         glfwSetWindowShouldClose(window, true);
-
-    if (input->isActionJustPressed("toggle_wireframe"))
-        wireframeMode = !wireframeMode;
 
     if (input->isActionPressed("move_left"))
         cam.processKeyboard(LEFT, deltaTime);
@@ -147,23 +124,6 @@ void Application::processInput()
     auto scrollDelta = input->getScrollDelta();
     if (scrollDelta.y != 0.0f)
         cam.processScroll(scrollDelta.y);
-
-    // light config
-    if (input->isActionJustPressed("toggle_flashlight"))
-        flashlightOn = !flashlightOn;
-    if (input->isActionJustPressed("toggle_light_mode"))
-        boringWhiteMode = !boringWhiteMode;
-
-    if (input->isActionJustPressed("toggle_light_placement"))
-        lightPlacementMode = !lightPlacementMode;
-
-    if (lightPlacementMode) {
-        pointLightPos = cam.pos + cam.front*lightPlacementModeDist;
-        if (input->isMouseButtonPressed(GLFW_MOUSE_BUTTON_1))
-            lightPlacementModeDist += lightPlacementOffsetSpeed*deltaTime;
-        if (input->isMouseButtonPressed(GLFW_MOUSE_BUTTON_2))
-            lightPlacementModeDist -= lightPlacementOffsetSpeed*deltaTime;
-    }
 }
 
 void Application::framebufferSizeCallback(GLFWwindow *window, int width, int height)
