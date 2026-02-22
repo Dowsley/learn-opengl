@@ -45,6 +45,55 @@ int sampleVoxel(ivec3 pos)
     return int(val * 255.0 + 0.5);
 }
 
+// DDA ray cast helper — returns true if ray hits a solid voxel within maxSteps
+bool castRay(vec3 origin, vec3 dir, int maxSteps)
+{
+    vec3 pos = origin;
+    ivec3 mapPos = ivec3(floor(pos));
+    vec3 deltaDist = abs(vec3(1.0) / dir);
+    ivec3 stepDir = ivec3(sign(dir));
+    vec3 sideDist = (sign(dir) * (vec3(mapPos) - pos) + sign(dir) * 0.5 + 0.5) * deltaDist;
+
+    for (int i = 0; i < maxSteps; i++)
+    {
+        if (mapPos.x < 0 || mapPos.y < 0 || mapPos.z < 0 ||
+            mapPos.x >= int(worldSize) || mapPos.y >= int(worldSize) || mapPos.z >= int(worldSize))
+            return false;
+
+        if (sampleVoxel(mapPos) != 0)
+            return true;
+
+        if (sideDist.x < sideDist.y)
+        {
+            if (sideDist.x < sideDist.z)
+            {
+                sideDist.x += deltaDist.x;
+                mapPos.x += stepDir.x;
+            }
+            else
+            {
+                sideDist.z += deltaDist.z;
+                mapPos.z += stepDir.z;
+            }
+        }
+        else
+        {
+            if (sideDist.y < sideDist.z)
+            {
+                sideDist.y += deltaDist.y;
+                mapPos.y += stepDir.y;
+            }
+            else
+            {
+                sideDist.z += deltaDist.z;
+                mapPos.z += stepDir.z;
+            }
+        }
+    }
+
+    return false;
+}
+
 void main()
 {
     // Reconstruct ray from screen coordinate using invViewProj
@@ -147,12 +196,50 @@ void main()
     // Compute face normal from the last step
     vec3 normal = -vec3(mask) * vec3(step);
 
-    // Simple directional sun lighting
+    // --- 1. Sun shadow ray ---
+    float shadowFactor = 1.0;
     float diffuse = max(dot(normal, sunDir), 0.0);
-    float ambient = 0.25;
-    float lighting = ambient + diffuse * 0.75;
+    if (diffuse > 0.0)
+    {
+        // Start shadow ray from the hit face, offset slightly into air
+        vec3 shadowOrigin = vec3(mapPos) + 0.5 + normal * 0.51;
+        if (castRay(shadowOrigin, sunDir, 64))
+            shadowFactor = 0.0;
+    }
 
-    vec3 color = getBlockColor(blockType) * lighting;
+    // --- 2. Voxel ambient occlusion ---
+    // Sample 4 edge-adjacent voxels on the hit face plane
+    vec3 absNormal = abs(normal);
+    ivec3 iNormal = ivec3(absNormal);
+    // Build two tangent directions on the face
+    ivec3 tangent1, tangent2;
+    if (iNormal.y == 1) {
+        tangent1 = ivec3(1, 0, 0);
+        tangent2 = ivec3(0, 0, 1);
+    } else if (iNormal.x == 1) {
+        tangent1 = ivec3(0, 1, 0);
+        tangent2 = ivec3(0, 0, 1);
+    } else {
+        tangent1 = ivec3(1, 0, 0);
+        tangent2 = ivec3(0, 1, 0);
+    }
+
+    ivec3 neighborBase = mapPos + ivec3(normal);
+    int occluded = 0;
+    if (sampleVoxel(neighborBase + tangent1) != 0) occluded++;
+    if (sampleVoxel(neighborBase - tangent1) != 0) occluded++;
+    if (sampleVoxel(neighborBase + tangent2) != 0) occluded++;
+    if (sampleVoxel(neighborBase - tangent2) != 0) occluded++;
+    float aoFactor = 1.0 - 0.15 * float(occluded);
+
+    // --- 3. Hemisphere ambient lighting ---
+    vec3 skyAmbient = vec3(0.30, 0.35, 0.50);   // blue-ish sky
+    vec3 groundAmbient = vec3(0.15, 0.10, 0.08); // warm brown ground
+    float hemiBlend = normal.y * 0.5 + 0.5; // 1 = up, 0.5 = side, 0 = down
+    vec3 hemiAmbient = mix(groundAmbient, skyAmbient, hemiBlend);
+
+    // --- 4. Combine lighting ---
+    vec3 color = getBlockColor(blockType) * (hemiAmbient * aoFactor + diffuse * shadowFactor * 0.75);
 
     // Slight fog based on distance
     float dist = length(vec3(mapPos) - ro);
